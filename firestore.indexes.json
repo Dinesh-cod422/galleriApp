@@ -1,0 +1,101 @@
+{
+  "indexes": [
+    {
+      "//": "Q1 newest + Q7 cursor pagination (same index)",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Q2 featured rail",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "flags.isFeatured", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Q3 trending rail, ordered by score",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "flags.isTrending", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "trendingScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Q4 category screen",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "categoryId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Author profile screen + client-side rename fan-out (section 9.5)",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Q5 token search",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "searchTokens", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Q6 title prefix search",
+      "collectionGroup": "prompts", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "titleLower", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "My favorites — collection group",
+      "collectionGroup": "favorites", "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "My likes — collection group",
+      "collectionGroup": "likes", "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "//": "Section D.2 — stop auto-indexing fields nobody queries. Saves write latency and index storage on every write.",
+      "collectionGroup": "prompts", "fieldPath": "prompt",
+      "indexes": []
+    },
+    { "collectionGroup": "prompts", "fieldPath": "imageUrl", "indexes": [] },
+    { "collectionGroup": "prompts", "fieldPath": "thumbnailUrl", "indexes": [] },
+    { "collectionGroup": "prompts", "fieldPath": "blurHash", "indexes": [] },
+    { "collectionGroup": "prompts", "fieldPath": "authorAvatarUrl", "indexes": [] },
+    {
+      "//": "Keep array-contains for search; drop the useless ascending/descending scalar indexes.",
+      "collectionGroup": "prompts", "fieldPath": "searchTokens",
+      "indexes": [{ "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }]
+    },
+    {
+      "collectionGroup": "prompts", "fieldPath": "tags",
+      "indexes": [{ "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }]
+    }
+  ]
+}

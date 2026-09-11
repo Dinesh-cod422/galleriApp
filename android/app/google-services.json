@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "412706684654",
+    "project_id": "notesapp-ed63a",
+    "storage_bucket": "notesapp-ed63a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412706684654:android:51f89b6eefe01fbb933dff",
+        "android_client_info": {
+          "package_name": "com.aipromptgallery"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhIk6EMRQ7MJ7pD8xlDnMVq2-uR-YT64I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "412706684654-3hlk9lb4q9696t4spc2r88c78qags5ae.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aipromptgallery"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412706684654:android:0379cf3228b561f0933dff",
+        "android_client_info": {
+          "package_name": "com.example.notes_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "412706684654-pmg6b349h13mjoh99rgtjg15130oqivd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.notes_app",
+            "certificate_hash": "f4682ed0a0432963de3aa3fbc25920d7522ed917"
+          }
+        },
+        {
+          "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhIk6EMRQ7MJ7pD8xlDnMVq2-uR-YT64I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "412706684654-3hlk9lb4q9696t4spc2r88c78qags5ae.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aipromptgallery"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

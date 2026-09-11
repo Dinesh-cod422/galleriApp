@@ -1,0 +1,15 @@
+{
+  "name": "ai-prompt-gallery-seed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Firestore dummy-data seeder. Node-only; never bundled into the app.",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "seed:dry": "node seed.mjs --dry-run",
+    "seed:emulator": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node seed.mjs --project demo-ai-prompt-gallery"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    /* The RN base config already enables `strict`. These add the checks that
+       actually catch bugs in this codebase's shapes. */
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Deliberately NOT enabled: `exactOptionalPropertyTypes`. It fights RN's
+       optional style/prop signatures constantly for very little bug yield. */
+
+    /* No `baseUrl`: deprecated in TS 6. With moduleResolution "bundler",
+       `paths` resolve relative to this file, which is what we want anyway. */
+    "paths": {
+      "@app/*": ["./src/app/*"],
+      "@core/*": ["./src/core/*"],
+      "@ds": ["./src/design-system/index.ts"],
+      "@ds/*": ["./src/design-system/*"],
+      "@features/*": ["./src/features/*"],
+      "@infra/*": ["./src/infrastructure/*"],
+      "@assets/*": ["./src/assets/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "index.js", "*.js"],
+  "exclude": ["**/node_modules", "**/Pods", "android", "ios"]
+}
