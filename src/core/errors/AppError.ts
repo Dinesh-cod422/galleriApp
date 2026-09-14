@@ -15,6 +15,14 @@ type BaseError = {
   readonly retryable: boolean;
   /** Original throwable, for the logger only. */
   readonly cause?: unknown;
+  /**
+   * A remediation the *developer* performs, not the user — e.g. creating a
+   * missing database index in a web console. Rendered only in `__DEV__`
+   * builds, and as a tappable action rather than a URL pasted into the
+   * message: these links run to hundreds of characters and are unreadable
+   * and untappable as body copy.
+   */
+  readonly devAction?: { readonly label: string; readonly url: string };
 };
 
 export type AppError =

@@ -1,0 +1,49 @@
+rules_version = '2';
+
+/**
+ * Core invariant: clients NEVER write to prompts/**.
+ *
+ * They upload to their own uploads/{uid}/ folder; a trusted process (the
+ * bulk uploader today, a Cloud Function later) validates, transcodes and
+ * writes the canonical objects with the Admin SDK, which bypasses these rules.
+ * That is what makes "public read" safe: everything readable here was written
+ * by something trusted.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Canonical, already-transcoded gallery images.
+    //
+    // Public read is deliberate and is what makes the deterministic
+    // `?alt=media` URL work with no download token: a token would add a
+    // round-trip per image and could be revoked, breaking every URL already
+    // stored in Firestore.
+    match /prompts/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /avatars/{userId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // The only path a client may write to.
+    match /uploads/{userId}/{fileName} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if isSignedIn()
+                   && request.auth.uid == userId
+                   && request.resource.size < 12 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(jpeg|png|webp|heic|avif)');
+    }
+
+    // Anything not named above is closed.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

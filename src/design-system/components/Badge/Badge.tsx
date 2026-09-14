@@ -5,7 +5,17 @@ import { type Theme } from '../../theme/theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { Text } from '../Text/Text';
 
-export type BadgeTone = 'neutral' | 'accent' | 'success' | 'danger';
+export type BadgeTone =
+  | 'neutral'
+  | 'accent'
+  | 'success'
+  | 'danger'
+  // Editorial status tags. Unlike the tones above these are tinted fills: a
+  // tag has to survive being laid over a photograph, and a label alone does
+  // not. They stay soft — a saturated fill would compete with the image.
+  | 'featured'
+  | 'trending'
+  | 'fresh';
 
 const styleFactory = (theme: Theme) => ({
   root: {
@@ -18,6 +28,9 @@ const styleFactory = (theme: Theme) => ({
   accentBg: { backgroundColor: theme.colors.accent.subtle },
   successBg: { backgroundColor: theme.colors.bg.subtle },
   dangerBg: { backgroundColor: theme.colors.bg.subtle },
+  featuredBg: { backgroundColor: theme.colors.tag.featured.bg },
+  trendingBg: { backgroundColor: theme.colors.tag.trending.bg },
+  freshBg: { backgroundColor: theme.colors.tag.fresh.bg },
 
   // Tone is carried by the label colour. The two status tones share the
   // neutral background on purpose — a filled red pill reads as an error,
@@ -26,6 +39,9 @@ const styleFactory = (theme: Theme) => ({
   accentText: { color: theme.colors.accent.onSubtle },
   successText: { color: theme.colors.status.success },
   dangerText: { color: theme.colors.status.danger },
+  featuredText: { color: theme.colors.tag.featured.fg },
+  trendingText: { color: theme.colors.tag.trending.fg },
+  freshText: { color: theme.colors.tag.fresh.fg },
 });
 
 const BadgeComponent = ({

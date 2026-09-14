@@ -33,6 +33,10 @@ const INDEXES = [
     fields: [asc('flags.isFeatured'), asc('status'), desc('publishedAt'), desc('__name__')] },
   { name: 'trending', collection: 'prompts',
     fields: [asc('flags.isTrending'), asc('status'), desc('trendingScore'), desc('__name__')] },
+  { name: 'most copied', collection: 'prompts',
+    fields: [asc('status'), desc('stats.copiesCount'), desc('__name__')] },
+  { name: 'most shared', collection: 'prompts',
+    fields: [asc('status'), desc('stats.sharesCount'), desc('__name__')] },
   { name: 'category', collection: 'prompts',
     fields: [asc('categoryId'), asc('status'), desc('publishedAt'), desc('__name__')] },
   { name: 'author profile', collection: 'prompts',
@@ -88,8 +92,11 @@ const run = async () => {
       } else if (status === 403) {
         console.error(`\n  PERMISSION DENIED creating "${ix.name}".`);
         console.error(`  ${msg}\n`);
-        console.error('  The service account needs the "Cloud Datastore Index Admin"');
-        console.error(`  role: https://console.cloud.google.com/iam-admin/iam?project=${PROJECT}\n`);
+        console.error('  This key can list indexes but not create them. Either:\n');
+        console.error('    (a) grant it "Cloud Datastore Index Admin" and re-run this script');
+        console.error(`        https://console.cloud.google.com/iam-admin/iam?project=${PROJECT}\n`);
+        console.error('    (b) create them by hand from the console links printed by:');
+        console.error('        node harvest-index-urls.mjs --key <service-account.json>\n');
         exit(1);
       } else {
         console.error(`  FAILED    ${ix.name}: ${msg}`);

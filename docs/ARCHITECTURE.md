@@ -612,6 +612,167 @@ fail in confusing ways.
 * **`ErrorState` takes the `AppError`, not a string**, so the retry button is
   driven by `error.retryable`. A "Try again" on a 404 is a dead end.
 
+## Gallery layout — the Pinterest/masonry grid
+
+`PromptMasonryGrid` (Home "Latest" + Category) renders variable-height tiles in
+shortest-column order. Decisions worth keeping:
+
+* **`FlashList masonry`, not two hand-stacked columns.** The usual workaround —
+  split the data into per-column arrays inside a `ScrollView` — forfeits
+  recycling, so a 500-prompt scroll holds 500 mounted images. Masonry keeps
+  windowing: mounted tiles stay proportional to the screen, not to the feed.
+  Requires the New Architecture, which this app is on.
+* **`optimizeItemArrangement` is off.** It balances column heights by reordering
+  items, which reshuffles tiles the user has already seen every time a page is
+  appended. Plain shortest-column placement is stable under append and already
+  produces the staggered look.
+* **Gaps live on the cells, not between them.** A cell cannot know whether it is
+  on an edge — masonry assigns it to whichever column is shortest — so each cell
+  carries half a gap on each side and the content container carries
+  `gutter - gap/2`.
+* **Aspect ratios are clamped to [0.5, 2].** A masonry column is only as
+  well-behaved as its most extreme cell: a 1:4 upload fills the viewport alone;
+  a 6:1 panorama collapses to a sliver. Every seeded ratio is already inside the
+  range, so this only guards real uploads.
+* **`aspectRatio` is a number on `PromptListItem`,** parsed from `'3:2'` in the
+  mapper. Layout must never parse strings during render.
+* **Tiles are a separate component from `PromptCard`, not a `variant` prop.**
+  A tile has no border, no surface and no fixed width — the image is the
+  content. A card is a fixed-width bordered surface for a horizontal rail. One
+  component would have branched on the variant in every style.
+* **"Related" is deliberately NOT one of `DETAIL_SECTIONS`.** Those four are
+  global rankings — the same nine prompts whichever page you are on — which is
+  why they can be a static table of sorts. Related is a function of the prompt
+  you are looking at, and folding it into that table would mean giving every
+  other entry a category parameter it does not use.
+* **Related is category-based, and its cache is keyed by CATEGORY, not by
+  prompt.** Two prompts in the same category share one answer, so opening five
+  photography prompts in a row costs one read rather than five. Tag overlap
+  would be a better relevance signal, but Firestore cannot rank by "number of
+  shared tags" without reading every candidate — that belongs behind a search
+  service, not a client-side scan.
+* **Its "Show all" opens the existing Category page**, not a section page: the
+  full list of related prompts IS that category, and a second screen running the
+  same query under a different title would be a duplicate. It also means Related
+  needs no new index.
+* **Four suggestion sections under a prompt, declared once in
+  `DETAIL_SECTIONS`.** The rail and the full page behind its "Show all" read the
+  same table, so a section cannot be titled one thing in the strip and another
+  in the header it opens. Adding a fifth section is one entry plus an index.
+* **Each rail owns its query.** The screen does not fetch four lists and pass
+  arrays down: a rail that fails or is still loading degrades on its own instead
+  of holding up the other three, and a failed or empty section renders nothing
+  at all — these are suggestions below the content the user actually asked for,
+  so an error card would be louder than the thing it sits under.
+* **A section fetches ten and shows nine.** The prompt you are looking at is
+  filtered out of its own sections; fetching `SECTION_SIZE + 1` means that
+  removal still leaves a full row, instead of a strip that silently shrinks to
+  eight on some prompts and not others.
+* **`stats.sharesCount` is a real counter, added for this.** "Most shared" had
+  no field behind it — the alternative was to rank by a proxy like favourites
+  and call it sharing, which would be a lie in the UI. It is guarded in the
+  rules exactly like the other trusted counters: zero on create, and movable
+  only one at a time by `isCounterWrite`.
+* **Sort field and cursor type live in ONE table** (`SORT` in the datasource).
+  A timestamp cursor decodes as a Date and a counter cursor as a Number; when
+  those were two separate `sort === 'trending'` checks, adding a sort meant
+  remembering to update both. Now a new sort cannot compile without deciding
+  both.
+* **The detail screen seeds its first paint from the query cache, not from a
+  navigation param.** Navigation carries ONLY `{ promptId }` — route params must
+  survive serialisation and process death, which a prompt object does not — but
+  the tile the user just tapped is by definition already cached, so
+  `findCachedPrompt` reads it back and the image, title, author and counts paint
+  on the FIRST frame while the document is still in flight. An earlier version
+  took an optional `preview` route param for this; nothing ever passed it, so
+  the path was dead and every open cold-loaded.
+* **The placeholder leaves `prompt: ''` rather than inventing a body.** That
+  empty string is the signal the screen renders a shimmer for; a plausible fake
+  would flash wrong text and then correct itself.
+* **The hero crossfades.** The placeholder paints the cached thumbnail upscaled,
+  and the full-resolution file fades in over it (`AppImage transition="fade"`) —
+  a hard cut between the two reads as a glitch.
+* **The action bar is pinned, not inline.** The page scrolls well past it, and
+  copy/share are what a prompt is FOR; requiring a scroll back up to reach them
+  is the kind of friction that makes a detail page feel like a document rather
+  than a tool.
+* **Clipboard and share return `Result`, not thrown errors.** Both failures are
+  expected branches — a denied clipboard permission, a share sheet that cannot
+  open — and a Result makes forgetting to handle them a type error rather than a
+  silent no-op. Dismissing the share sheet is a SUCCESS (`ShareOutcome`):
+  collapsing it into the error case would show a failure message to a user who
+  simply changed their mind.
+* **Copy confirms on the button, not in a toast.** The user is already looking
+  at the control they pressed; a toast animates in elsewhere and covers content.
+  The button becomes "Copied" with a tick for two seconds, and the reset timer
+  is cleared on unmount so navigating back inside that window cannot set state
+  on an unmounted screen.
+* **Both actions stay disabled until the full document arrives.** The detail
+  screen seeds itself from the cached list item, where `prompt` is an empty
+  string — without the guard, Copy would put nothing on the clipboard.
+* **ONE tile component (`PromptTile`) for the grid and the rails.** They had
+  drifted into two near-identical components differing only in how width and
+  aspect ratio were resolved, which is a maintenance trap: fix a bug in one and
+  the other keeps it. `width` and `aspectRatio` are now optional overrides —
+  omitted in the masonry grid, where FlashList hands each cell its column width;
+  supplied in a rail, which needs uniform cells. `PromptCard` and
+  `PromptCardSkeleton` were deleted as superseded.
+* **The tile is the image, plus only what must sit on top of it.** No title,
+  author or counts: a caption block under every tile roughly doubles the grid's
+  height, so the screen shows half as many ideas, and the text is redundant the
+  moment the tile is tapped. Everything textual lives on the detail screen. The
+  tile therefore carries its title in `accessibilityLabel` — with no visible
+  text, that is the only thing a screen reader has to read out.
+* **Favourites are local-only (Zustand + MMKV), deliberately.** The app reads
+  Firestore unauthenticated, so there is no user to attach a server-side
+  favourite to yet. MMKV rather than AsyncStorage because its reads are
+  SYNCHRONOUS: the set is hydrated during the first render, so a favourited tile
+  never paints empty and flips a frame later. When auth lands, the store is
+  seeded from `prompts/{id}/favorites` and writes through to it — no screen
+  changes, because screens already talk to `useIsFavorite`/`useToggleFavorite`.
+* **`FavoriteButton` reads the store itself instead of taking an `isFavorite`
+  prop.** The selector returns ONE boolean and Zustand compares with `Object.is`,
+  so pressing a heart re-renders that button and nothing else — not the tile,
+  not its siblings, not the grid. This is the "avoid unnecessary Zustand
+  subscriptions" rule in practice: subscribe to the narrowest derived value, not
+  to the collection.
+* **Favourite ids live in a `Set`, not an array.** Every visible tile asks "am I
+  favourited?" on every render; `Array.includes` makes that O(n) per tile per
+  frame while scrolling.
+* **The stores are factories (`createFavoritesStore(storage)`).** Injecting the
+  `KeyValueStore` interface means tests hand it an in-memory object — no
+  `jest.mock`, no native module — which is the same dependency-inversion move
+  the repositories make.
+* **One status tag per card, strongest editorial signal first** (Featured >
+  Trending > New), each with its own colour pair in `colors.tag.*`. The old
+  single accent-coloured "Trending" pill appeared on 16 of 32 prompts, which
+  told the reader nothing about any particular one. A tag is a
+  `{ bg, fg }` PAIR rather than a hue, because one hue cannot stay legible on
+  both themes. `New` ranks LAST despite being scarcest: the feed is sorted
+  newest-first, so recency is already encoded in a card's position.
+* **The tag rule lives in `toPromptBadge`, shared by the grid tile and the
+  detail screen**, so a prompt cannot be tagged Featured in the feed and
+  untagged on its own page.
+* **Home is one endless, filterable stream — no title block, no rails.** Every
+  row of chrome above the grid is a row of ideas the user cannot see. The
+  category filter is the single exception and is pinned *outside* the scroll
+  view (a sibling of the list, not a `ListHeaderComponent`), so it stays
+  reachable at any scroll depth without fighting masonry over sticky indices.
+  Selecting a category narrows the same feed rather than navigating away, so the
+  scroll-browse-refine loop never leaves the screen.
+* **One `usePromptFeed(categoryId | null)` hook, not two.** Hooks cannot be
+  called conditionally, so a filtered feed built from separate "latest" and
+  "by category" hooks would mount both and discard one — two subscriptions and
+  two sets of reads. The query key still separates the caches.
+* **Rails pass a uniform `aspectRatio`; the grid does not.** A horizontal list
+  sizes itself to its TALLEST cell, so natural ratios in a rail leave dead space
+  under every shorter card (a 2:3 tile is 390pt where a 3:2 is 173pt). Variable
+  heights belong in the grid; rails want uniform cells.
+* **Horizontal lists set `flexGrow: 0`.** React Native's ScrollView base style
+  is `flexGrow: 1` (`Libraries/Components/ScrollView/ScrollView.js`,
+  `baseHorizontal`), so a rail expands to its parent's height rather than
+  hugging its content.
+
 ## Verification gates
 
 `npm run verify` runs all four:

@@ -10,6 +10,8 @@
     "seed:emulator": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node seed.mjs --project demo-ai-prompt-gallery"
   },
   "dependencies": {
-    "firebase-admin": "^13.0.0"
+    "firebase-admin": "^13.0.0",
+    "p-limit": "^7.3.2",
+    "sharp": "^0.35.4"
   }
 }

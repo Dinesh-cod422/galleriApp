@@ -1,0 +1,158 @@
+rules_version = '2';
+
+/**
+ * AI Prompt Gallery — Firestore security rules.
+ * See docs/FIREBASE-ARCHITECTURE.md §E and §9.2.
+ *
+ * Core invariant: stats.* and flags.* are NEVER freely writable by a client.
+ * Counters may only move by exactly +/-1, and (for likes/favorites) only in the
+ * same atomic batch that creates or deletes the caller's own membership doc.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Admin is a custom claim, never a Firestore field — a field would cost a
+    // billed document read on every rule evaluation.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    match /prompts/{promptId} {
+
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      function isOwner() {
+        return isSignedIn() && resource.data.authorId == request.auth.uid;
+      }
+
+      // Exactly one counter field moves, by exactly `delta`, and nothing else.
+      function isCounterWrite(field, delta) {
+        return isSignedIn()
+          && changedKeys().hasOnly(['stats'])
+          && request.resource.data.stats[field] == resource.data.stats[field] + delta
+          && request.resource.data.stats.diff(resource.data.stats).affectedKeys().hasOnly([field]);
+      }
+
+      function ownLike() {
+        return /databases/$(database)/documents/prompts/$(promptId)/likes/$(request.auth.uid);
+      }
+      function ownFavorite() {
+        return /databases/$(database)/documents/prompts/$(promptId)/favorites/$(request.auth.uid);
+      }
+
+      allow read: if resource.data.status == 'published' || isOwner() || isAdmin();
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.status in ['draft', 'pending']
+        && request.resource.data.stats.likesCount == 0
+        && request.resource.data.stats.viewsCount == 0
+        && request.resource.data.stats.copiesCount == 0
+        && request.resource.data.stats.favoritesCount == 0
+        && request.resource.data.stats.sharesCount == 0
+        && request.resource.data.flags.isFeatured == false
+        && request.resource.data.flags.isTrending == false
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.prompt.size() <= 4000;
+
+      allow update: if isAdmin()
+        // Owner edits content only — never stats, flags, authorId or counters.
+        || (isOwner()
+            && changedKeys().hasOnly([
+                 'title', 'titleLower', 'searchTokens', 'prompt', 'tags',
+                 'categoryId', 'categoryName', 'metadata', 'updatedAt', 'status',
+                 'imageUrl', 'thumbnailUrl', 'blurHash'
+               ])
+            && request.resource.data.status in ['draft', 'pending', 'published']
+            && request.resource.data.stats == resource.data.stats
+            && request.resource.data.flags == resource.data.flags
+            && request.resource.data.authorId == resource.data.authorId)
+        // getAfter()/existsAfter() evaluate state AFTER the whole batch commits,
+        // so a counter cannot move without the caller's own membership doc.
+        || (isCounterWrite('likesCount', 1)
+            && getAfter(ownLike()).data.userId == request.auth.uid)
+        || (isCounterWrite('likesCount', -1)
+            && !existsAfter(ownLike()))
+        || (isCounterWrite('favoritesCount', 1)
+            && getAfter(ownFavorite()).data.userId == request.auth.uid)
+        || (isCounterWrite('favoritesCount', -1)
+            && !existsAfter(ownFavorite()))
+        // Vanity metrics: no membership document exists to validate against, so
+        // these are only as trustworthy as App Check makes them.
+        || isCounterWrite('viewsCount', 1)
+        || isCounterWrite('copiesCount', 1)
+        || isCounterWrite('sharesCount', 1);
+
+      allow delete: if isAdmin() || isOwner();
+
+      // A like is a public signal.
+      match /likes/{userId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && userId == request.auth.uid;
+        // No update: it would let a client rewrite createdAt and corrupt the
+        // collection-group ordering.
+        allow update: if false;
+      }
+
+      // A favorite is a private bookmark.
+      match /favorites/{userId} {
+        allow read: if isSignedIn() && userId == request.auth.uid;
+        allow create: if isSignedIn()
+          && userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && userId == request.auth.uid;
+        allow update: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.body.size() >= 1
+          && request.resource.data.body.size() <= 1000
+          && request.resource.data.status == 'visible';
+        allow update: if isSignedIn()
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body', 'updatedAt']);
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorId == request.auth.uid);
+      }
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'avatarUrl', 'bio']);
+      allow delete: if isAdmin();
+
+      match /private/{docId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // Anything not matched above is denied.
+  }
+}

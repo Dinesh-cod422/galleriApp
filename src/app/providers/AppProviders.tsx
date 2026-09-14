@@ -6,6 +6,8 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { ShimmerProvider, ThemeProvider, useTheme } from '@ds';
 
+import { QueryProvider } from './QueryProvider';
+
 /**
  * The composition root's provider stack. Order is not arbitrary:
  *
@@ -15,7 +17,7 @@ import { ShimmerProvider, ThemeProvider, useTheme } from '@ds';
  *        └ ShimmerProvider one skeleton clock for the whole tree
  *          └ BottomSheetModalProvider  sheets portal to here, so it sits high
  *
- * Phase 4 inserts QueryProvider directly beneath ThemeProvider.
+ *            └ QueryProvider   server state for everything below
  */
 const ThemedStatusBar = (): React.JSX.Element => {
   const theme = useTheme();
@@ -30,12 +32,14 @@ export const AppProviders = ({ children }: { children: React.ReactNode }): React
   <GestureHandlerRootView style={styles.root}>
     <SafeAreaProvider>
       <ThemeProvider>
-        <ShimmerProvider>
-          <BottomSheetModalProvider>
-            <ThemedStatusBar />
-            {children}
-          </BottomSheetModalProvider>
-        </ShimmerProvider>
+        <QueryProvider>
+          <ShimmerProvider>
+            <BottomSheetModalProvider>
+              <ThemedStatusBar />
+              {children}
+            </BottomSheetModalProvider>
+          </ShimmerProvider>
+        </QueryProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   </GestureHandlerRootView>

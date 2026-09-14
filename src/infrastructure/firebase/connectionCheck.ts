@@ -24,8 +24,12 @@ export const checkFirestoreConnection = async (): Promise<ConnectionReport> => {
       .limit(1)
       .get();
 
+    // The status filter is REQUIRED, not cosmetic: Firestore allows a query
+    // only if the rules can guarantee every matched document is readable.
+    // An unfiltered count() over `prompts` is denied, because drafts are not
+    // world-readable.
     const [promptCount, categoryCount] = await Promise.all([
-      db.collection(collections.prompts).count().get(),
+      db.collection(collections.prompts).where('status', '==', 'published').count().get(),
       db.collection(collections.categories).count().get(),
     ]);
 

@@ -21,9 +21,24 @@ describe('createTheme', () => {
     const light = createTheme('light', 'md');
     const dark = createTheme('dark', 'md');
 
-    const groups = ['bg', 'text', 'border', 'accent', 'status', 'skeleton'] as const;
+    const groups = ['bg', 'text', 'border', 'accent', 'status', 'skeleton', 'tag'] as const;
     for (const group of groups) {
       expect(Object.keys(light.colors[group])).toEqual(Object.keys(dark.colors[group]));
+    }
+  });
+
+  it('gives every status tag a distinct background and foreground in both modes', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const { tag } = createTheme(mode, 'md').colors;
+      const tags = [tag.featured, tag.trending, tag.fresh];
+
+      // A tag whose ink matches its tint is invisible.
+      for (const t of tags) {
+        expect(t.bg).not.toBe(t.fg);
+      }
+      // And three tags sharing one colour carry no more information than one.
+      expect(new Set(tags.map(t => t.bg)).size).toBe(3);
+      expect(new Set(tags.map(t => t.fg)).size).toBe(3);
     }
   });
 

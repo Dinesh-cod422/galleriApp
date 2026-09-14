@@ -1,7 +1,8 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Linking, View } from 'react-native';
 
 import { type AppError } from '@core/errors/AppError';
+import { fireAndForget } from '@core/utils/fireAndForget';
 
 import { type Theme } from '../../theme/theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -44,6 +45,15 @@ export const ErrorState = ({ error, onRetry, testID }: ErrorStateProps): React.J
   const styles = useThemedStyles(styleFactory);
   const canRetry = error.retryable && onRetry != null;
 
+  // Dev-only, and deliberately not a `Linking.canOpenURL` round trip: an
+  // https URL is always openable, and the check would only add an async hop.
+  const { devAction } = error;
+  const openDevAction = useCallback(() => {
+    if (devAction != null) {
+      fireAndForget(Linking.openURL(devAction.url));
+    }
+  }, [devAction]);
+
   return (
     <View style={styles.root} testID={testID} accessibilityRole="alert">
       <Text variant="h3" align="center">
@@ -54,6 +64,16 @@ export const ErrorState = ({ error, onRetry, testID }: ErrorStateProps): React.J
       </Text>
       {canRetry && (
         <Button label="Try again" onPress={onRetry} variant="secondary" style={styles.action} />
+      )}
+      {__DEV__ && devAction != null && (
+        <Button
+          label={devAction.label}
+          onPress={openDevAction}
+          variant="ghost"
+          size="sm"
+          accessibilityHint="Opens the console in your browser"
+          testID="error-state-dev-action"
+        />
       )}
     </View>
   );

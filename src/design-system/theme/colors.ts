@@ -33,12 +33,29 @@ const palette = {
   violet600: '#7C3AED',
   violet700: '#6D28D9',
 
+  teal100: '#CCFBF1',
   teal400: '#2DD4BF',
+  teal700: '#0F766E',
+  amber100: '#FEF3C7',
   amber400: '#FBBF24',
+  amber700: '#B45309',
   rose400: '#FB7185',
   rose500: '#F43F5E',
   green500: '#22C55E',
 } as const;
+
+/**
+ * A tag is a (background, foreground) PAIR, not a single hue.
+ *
+ * One hue cannot carry a tag on its own: the amber that reads as "trending" on
+ * a white canvas is unreadable as text on a dark one, and legible-everywhere
+ * hues all collapse toward the same muddy mid-tone. Pairing lets each theme
+ * pick a tint and an ink that actually contrast.
+ */
+export type TagColor = {
+  readonly bg: string;
+  readonly fg: string;
+};
 
 export type ColorTokens = {
   readonly bg: {
@@ -82,6 +99,19 @@ export type ColorTokens = {
     readonly warning: string;
     readonly danger: string;
   };
+  /**
+   * Editorial status tags on a prompt. Each gets its OWN hue so the tag is
+   * legible at a glance in a dense grid — a wall of identically-coloured pills
+   * carries no information, whatever the pills say.
+   */
+  readonly tag: {
+    /** Editorially picked. */
+    readonly featured: TagColor;
+    /** Rising right now. */
+    readonly trending: TagColor;
+    /** Published in the last week. */
+    readonly fresh: TagColor;
+  };
   readonly skeleton: {
     readonly base: string;
     readonly highlight: string;
@@ -123,6 +153,11 @@ export const lightColors: ColorTokens = {
     warning: palette.amber400,
     danger: palette.rose500,
   },
+  tag: {
+    featured: { bg: '#EDE9FE', fg: palette.violet700 },
+    trending: { bg: palette.amber100, fg: palette.amber700 },
+    fresh: { bg: palette.teal100, fg: palette.teal700 },
+  },
   skeleton: {
     base: palette.ink100,
     highlight: palette.ink200,
@@ -163,6 +198,11 @@ export const darkColors: ColorTokens = {
     success: palette.green500,
     warning: palette.amber400,
     danger: palette.rose400,
+  },
+  tag: {
+    featured: { bg: '#2A2140', fg: palette.violet300 },
+    trending: { bg: '#3A2E12', fg: palette.amber400 },
+    fresh: { bg: '#0F2E2A', fg: palette.teal400 },
   },
   skeleton: {
     base: palette.ink800,

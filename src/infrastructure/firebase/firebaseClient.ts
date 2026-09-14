@@ -1,5 +1,7 @@
 import firestore, { type FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
+import { firestoreEmulator } from './devConfig';
+
 /**
  * The ONLY module in the app allowed to import a Firebase SDK.
  *
@@ -24,6 +26,11 @@ let configured = false;
 export const getFirestoreClient = (): Firestore => {
   const db = firestore();
   if (!configured) {
+    // Must precede any other call on the instance. Double-guarded by __DEV__ so
+    // a release build can never be pointed at a developer machine.
+    if (__DEV__ && firestoreEmulator.enabled) {
+      db.useEmulator(firestoreEmulator.host, firestoreEmulator.port);
+    }
     db.settings({
       persistence: true,
       cacheSizeBytes: 100 * 1024 * 1024,
@@ -32,6 +39,14 @@ export const getFirestoreClient = (): Firestore => {
   }
   return db;
 };
+
+/**
+ * The `__name__` sentinel, used as the pagination tiebreaker so value cursors
+ * address a total ordering. Exposed here so the data layer never imports the
+ * Firebase SDK directly.
+ */
+export const documentIdPath = (): FirebaseFirestoreTypes.FieldPath =>
+  firestore.FieldPath.documentId();
 
 /** Collection paths in one place, so a typo is a compile error, not an empty list. */
 export const collections = {

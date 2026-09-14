@@ -16,6 +16,7 @@ import { cert, initializeApp } from 'firebase-admin/app';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 
 import { AUTHORS, CATEGORIES, PROMPTS } from './data.mjs';
+import { aspectToNumber, buildSearchTokens, normalize, trendingScore } from './promptDoc.mjs';
 
 // ─── CLI ────────────────────────────────────────────────────────────────────
 const flag = (name) => argv.includes(`--${name}`);
@@ -36,36 +37,7 @@ const DATABASE_ID = value('database');
 const MS_PER_DAY = 86_400_000;
 const NOW = Date.now();
 
-// ─── Derivations (single source of truth for computed fields) ───────────────
-const STOP_WORDS = new Set(['a', 'an', 'the', 'in', 'on', 'at', 'of', 'and', 'with', 'to']);
-
-const normalize = (s) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
-/** Title words + tags, deduped, stop-words dropped, capped at 20. */
-const buildSearchTokens = (title, tags) => {
-  const fromTitle = normalize(title).split(/[^a-z0-9]+/).filter(Boolean);
-  const fromTags = tags.flatMap((t) => normalize(t).split(/[^a-z0-9]+/)).filter(Boolean);
-  const out = [];
-  for (const token of [...fromTitle, ...fromTags]) {
-    if (token.length < 2 || STOP_WORDS.has(token) || out.includes(token)) continue;
-    out.push(token);
-    if (out.length === 20) break;
-  }
-  return out;
-};
-
-/** Matches docs/FIREBASE-ARCHITECTURE.md §A.4 exactly. */
-const trendingScore = (stats, ageHours) => {
-  const engagement =
-    stats.likesCount + 2 * stats.favoritesCount + 3 * stats.copiesCount + 0.1 * stats.viewsCount;
-  return Number((engagement / Math.pow(ageHours + 2, 1.5)).toFixed(2));
-};
-
-const aspectToNumber = (ratio) => {
-  const [w, h] = ratio.split(':').map(Number);
-  return w / h;
-};
+// ─── Derivations: see promptDoc.mjs (shared with upload-images.mjs) ────────
 
 /**
  * Placeholder imagery. Real images arrive via the Storage upload pipeline;
@@ -89,7 +61,10 @@ const buildImageUrls = (promptDoc) => {
   };
 };
 
-const avatarUrl = (authorId) => `https://i.pravatar.cc/200?u=${authorId}`;
+// Prefer the author's own avatar from the export; fall back to a deterministic
+// placeholder so every author still renders.
+const avatarUrl = (author) =>
+  author.avatarUrl ?? `https://i.pravatar.cc/200?u=${author.id}`;
 
 // ─── Document builders ──────────────────────────────────────────────────────
 const categoryById = new Map(CATEGORIES.map((c) => [c.id, c]));
@@ -110,6 +85,8 @@ const buildPromptDoc = (p) => {
     titleLower: normalize(p.title),
     searchTokens: buildSearchTokens(p.title, p.tags),
     prompt: p.prompt,
+    // Permalink to the original post. Attribution only — never an image source.
+    sourceUrl: p.sourceUrl ?? null,
 
     imageUrl,
     thumbnailUrl,
@@ -121,7 +98,7 @@ const buildPromptDoc = (p) => {
 
     authorId: author.id,
     authorName: author.displayName,
-    authorAvatarUrl: avatarUrl(author.id),
+    authorAvatarUrl: avatarUrl(author),
 
     stats: p.stats,
     flags: p.flags,
@@ -149,7 +126,7 @@ const buildCategoryDoc = (c) => ({
 
 const buildUserDoc = (a) => ({
   displayName: a.displayName,
-  avatarUrl: avatarUrl(a.id),
+  avatarUrl: avatarUrl(a),
   bio: a.bio,
   promptCount: PROMPTS.filter((p) => p.authorId === a.id).length,
   createdAt: Timestamp.fromMillis(NOW - 180 * MS_PER_DAY),

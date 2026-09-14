@@ -146,6 +146,12 @@ module.exports = {
       },
     },
     {
+      // React Navigation's screenOptions API takes render props by design;
+      // a tab bar icon is not a subtree whose state can be destroyed.
+      files: ['src/app/navigation/**/*.tsx'],
+      rules: { 'react/no-unstable-nested-components': ['error', { allowAsProps: true }] },
+    },
+    {
       files: ['**/*.test.{ts,tsx}', '**/__tests__/**'],
       rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
     },

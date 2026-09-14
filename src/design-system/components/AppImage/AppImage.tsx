@@ -30,6 +30,12 @@ export type AppImageProps = {
   /** Width / height. Fixing this is what prevents layout shift in lists. */
   aspectRatio?: number;
   priority?: ImagePriority;
+  /**
+   * Crossfade when the source changes. The detail screen paints a cached
+   * thumbnail on the first frame and swaps the full-resolution file in moments
+   * later; a hard cut between the two reads as a glitch.
+   */
+  transition?: 'fade' | 'none';
   resizeMode?: ResizeMode;
   borderRadius?: number;
   accessibilityLabel?: string;
@@ -52,6 +58,7 @@ const AppImageComponent = ({
   uri,
   aspectRatio,
   priority = 'normal',
+  transition = 'none',
   resizeMode = 'cover',
   borderRadius,
   accessibilityLabel,
@@ -75,6 +82,7 @@ const AppImageComponent = ({
         accessibilityLabel={accessibilityLabel}
         style={styles.image}
         resizeMode={resizeMode}
+        transition={transition}
         source={{ uri, priority, cache: 'immutable' }}
       />
     </View>

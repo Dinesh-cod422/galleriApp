@@ -122,3 +122,45 @@ all — so the SDK cannot leak upward.
 
 Offline persistence is on with a 100 MB cache (the 40 MB default evicts too
 aggressively for an image-heavy gallery).
+
+### Security rules
+
+`firestore.rules` is deployed to `notesapp-ed63a`. The project previously had
+the default test-mode rules, which **expired on 2025-10-09** — every client
+request was denied while the Admin SDK (which bypasses rules) kept working, so
+seeding succeeded and the app could not read a thing.
+
+Deploy with `node tools/seed/rules-deploy.mjs --key <sa.json> --rules firestore.rules`.
+It prints the previous ruleset id first, so rollback is one call.
+
+What the rules guarantee:
+
+- Published prompts are world-readable; drafts only by their author or an admin.
+- `stats.*` and `flags.*` are **never** freely writable. Counters move by exactly
+  ±1, and likes/favourites only in the same atomic batch that creates or deletes
+  the caller's own membership document (`getAfter()` / `existsAfter()`).
+- Likes are public, favourites are private; neither allows `update`, which would
+  let a client rewrite `createdAt` and corrupt collection-group ordering.
+- Admin is the custom claim `request.auth.token.admin`, never a Firestore field.
+
+**Query constraint this imposes:** Firestore allows a query only when the rules
+can guarantee every matched document is readable. An unfiltered
+`collection('prompts').count()` is therefore denied — every prompts query must
+carry `where('status', '==', 'published')`.
+
+### Running it
+
+```bash
+nvm use
+npm start                    # Metro
+npm run ios                  # or open ios/AIPromptGallery.xcworkspace
+```
+
+Known environment gotchas on this machine:
+
+- **Quit Xcode before `npm run ios`** — Xcode holds an exclusive lock on
+  `build.db` in DerivedData, and a concurrent `xcodebuild` fails with
+  `database is locked`.
+- A full cold build of this project (React from source + Firebase + gRPC) needs
+  roughly **10 GB** of DerivedData. Builds fail with `No space left on device`
+  long before they fail for any interesting reason.

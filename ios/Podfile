@@ -5,6 +5,15 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# React Native 0.87's prebuilt React Core ships React as a DYNAMIC framework,
+# links it, and then never embeds it into the .app — the CocoaPods embed script
+# only copies ReactNativeDependencies and hermesvm. The app builds fine and then
+# dies at launch with:
+#   dyld: Library not loaded: @rpath/React.framework/React
+# Building React Core from source links it statically, so there is nothing to
+# embed. Costs a slower first build; buys an app that actually starts.
+ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
@@ -41,5 +50,13 @@ target 'AIPromptGallery' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    installer.aggregate_targets.each do |target|
+      target.xcconfigs.each do |config_name, config_file|
+        config_file.other_linker_flags[:frameworks]&.delete("FirebaseFirestoreInternal")
+        config_file.other_linker_flags[:weak_frameworks]&.delete("FirebaseFirestoreInternal")
+        xcconfig_path = target.xcconfig_path(config_name)
+        config_file.save_as(xcconfig_path)
+      end
+    end
   end
 end
