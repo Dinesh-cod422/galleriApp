@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { useResponsive as usePackageResponsive } from '@dineshcodes/responsive-react-native-ui';
 
 import {
   type Breakpoint,
@@ -19,26 +19,32 @@ export type ResponsiveInfo = {
 };
 
 /**
- * Uses `useWindowDimensions` rather than `Dimensions.get`, which is captured
- * once at module load and is wrong after a rotation or a split-screen resize.
+ * The window, as the package sees it.
  *
- * The breakpoint keys off the SHORTEST edge, so a phone in landscape stays a
- * phone instead of briefly claiming to be a tablet.
+ * Its `useResponsive` subscribes to dimension changes itself, so the numbers
+ * stay right after a rotation or a split-screen resize — unlike `Dimensions.get`,
+ * which is captured once at module load. `isTablet` and `isLandscape` come from
+ * the package too rather than being re-derived here.
+ *
+ * The one thing added is the breakpoint, which keys off the SHORTEST edge so a
+ * phone in landscape stays a phone. That is a SEPARATE question from
+ * `isTablet`: the package calls a device a tablet at 600dp (Android's `sw600dp`,
+ * true of every iPad), while `xl` sits at 840dp because it answers "is there
+ * room for a fourth grid column".
  */
 export const useResponsive = (): ResponsiveInfo => {
-  const { width, height } = useWindowDimensions();
+  const { width, height, isTablet, isLandscape } = usePackageResponsive();
 
   return useMemo(() => {
-    const shortestEdge = Math.min(width, height);
-    const breakpoint = resolveBreakpoint(shortestEdge);
+    const breakpoint = resolveBreakpoint(Math.min(width, height));
     return {
       width,
       height,
       breakpoint,
-      isTablet: breakpoint === 'xl',
-      isLandscape: width > height,
+      isTablet,
+      isLandscape,
       gridColumns: gridColumnsForBreakpoint[breakpoint],
       maxContentWidth: maxContentWidthForBreakpoint[breakpoint],
     };
-  }, [width, height]);
+  }, [width, height, isTablet, isLandscape]);
 };

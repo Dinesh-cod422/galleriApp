@@ -1,7 +1,12 @@
-import { collections, documentIdPath, getFirestoreClient } from '@infra/firebase/firebaseClient';
+import {
+  collections,
+  documentIdPath,
+  getFirestoreClient,
+  incrementBy,
+} from '@infra/firebase/firebaseClient';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-import { type PromptSort } from '../../domain/repositories/PromptRepository';
+import { type PromptCounter, type PromptSort } from '../../domain/repositories/PromptRepository';
 import { type PromptDto } from '../dto/PromptDto';
 
 type Query = FirebaseFirestoreTypes.Query;
@@ -122,6 +127,24 @@ export class PromptFirestoreDataSource {
       return null;
     }
     return { id: snapshot.id, data: snapshot.data() as PromptDto };
+  }
+
+  /**
+   * One counter, plus one, server-side.
+   *
+   * `update` and not `set(..., {merge:true})` on purpose: update fails if the
+   * document is gone, which is what should happen — a counter on a deleted
+   * prompt would otherwise silently resurrect it as a stats-only stub.
+   *
+   * The dotted path is what keeps the write surgical. Writing the whole
+   * `stats` map would clobber concurrent likes, and the security rules reject
+   * it anyway: they require exactly one affected key inside `stats`.
+   */
+  async incrementStat(id: string, counter: PromptCounter, amount: number): Promise<void> {
+    await this.db
+      .collection(collections.prompts)
+      .doc(id)
+      .update({ [`stats.${counter}`]: incrementBy(amount) });
   }
 
   private toRawPage(snapshot: QuerySnapshot, params: PromptQuery): RawPage {

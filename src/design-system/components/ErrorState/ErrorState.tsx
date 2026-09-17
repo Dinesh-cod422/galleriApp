@@ -1,26 +1,35 @@
 import React, { useCallback } from 'react';
-import { Linking, View } from 'react-native';
+import { StyleSheet, Linking, View } from 'react-native';
 
 import { type AppError } from '@core/errors/AppError';
 import { fireAndForget } from '@core/utils/fireAndForget';
 
-import { type Theme } from '../../theme/theme';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 import { Button } from '../Button/Button';
 import { Text } from '../Text/Text';
 
-const styleFactory = (theme: Theme) => ({
-  root: {
-    flex: 1,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    paddingHorizontal: theme.spacing.xl,
-    gap: theme.spacing.sm,
-  },
-  action: {
-    marginTop: theme.spacing.base,
-  },
-});
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale, VScale } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      root: {
+        flex: 1,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        paddingHorizontal: HScale.Width_28,
+        gap: HScale.Width_9,
+      },
+      action: {
+        marginTop: VScale.Height_19,
+      },
+    }),
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 const TITLE_BY_KIND: Record<AppError['kind'], string> = {
   network: 'No connection',
@@ -42,7 +51,7 @@ export type ErrorStateProps = {
  * a dead end the user will press twice.
  */
 export const ErrorState = ({ error, onRetry, testID }: ErrorStateProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
   const canRetry = error.retryable && onRetry != null;
 
   // Dev-only, and deliberately not a `Linking.canOpenURL` round trip: an

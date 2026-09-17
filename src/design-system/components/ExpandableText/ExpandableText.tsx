@@ -1,9 +1,10 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Pressable, useWindowDimensions, View, type TextLayoutEvent } from 'react-native';
+import { StyleSheet, Pressable, useWindowDimensions, View, type TextLayoutEvent } from 'react-native';
 
-import { useTheme } from '../../theme/ThemeProvider';
-import { type Theme } from '../../theme/theme';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useResponsive } from '../../responsive/useResponsive';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 import { type TextVariant } from '../../theme/typography';
 import { Text, type TextColorToken } from '../Text/Text';
 
@@ -19,24 +20,33 @@ export type ExpandableTextProps = {
   readonly testID?: string;
 };
 
-const styleFactory = (theme: Theme) => ({
-  /**
-   * An off-screen copy used only to count lines.
-   *
-   * It cannot be measured from the visible copy: once `numberOfLines` clamps
-   * that one, onTextLayout reports the CLAMPED lines, so a 40-line prompt and
-   * an 8-line prompt both report 7 and the toggle could never be shown
-   * correctly. This copy is never clamped, so its count is the true one.
-   */
-  measure: {
-    position: 'absolute' as const,
-    left: 0,
-    right: 0,
-    top: 0,
-    opacity: 0,
-  },
-  toggle: { paddingTop: theme.spacing.sm, alignSelf: 'flex-start' as const },
-});
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale, VScale } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      /**
+       * An off-screen copy used only to count lines.
+       *
+       * It cannot be measured from the visible copy: once `numberOfLines` clamps
+       * that one, onTextLayout reports the CLAMPED lines, so a 40-line prompt and
+       * an 8-line prompt both report 7 and the toggle could never be shown
+       * correctly. This copy is never clamped, so its count is the true one.
+       */
+      measure: {
+        position: 'absolute' as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        opacity: 0,
+      },
+      toggle: { paddingTop: VScale.Height_9, alignSelf: 'flex-start' as const },
+    }),
+    metrics: { sm: HScale.Width_9 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 /**
  * Long text, clamped, with a toggle that appears ONLY when there is something
@@ -53,9 +63,14 @@ const ExpandableTextComponent = ({
   collapseLabel = 'Show less',
   testID,
 }: ExpandableTextProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
-  const { width, fontScale } = useWindowDimensions();
+  const styles = useStyles();
+  // Width from the package, which is the app's one source for a window
+  // measurement. The package's `getFontScale()` reads the same OS setting, but
+  // as a one-off call it cannot re-render this component when the setting
+  // changes — and a stale line count is exactly the bug below guards against —
+  // so the reactive hook stays.
+  const { width } = useResponsive();
+  const { fontScale } = useWindowDimensions();
   const [totalLines, setTotalLines] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -103,7 +118,7 @@ const ExpandableTextComponent = ({
         <Pressable
           onPress={toggle}
           style={styles.toggle}
-          hitSlop={theme.spacing.sm}
+          hitSlop={styles.metrics.sm}
           accessibilityRole="button"
           accessibilityState={{ expanded }}
           testID={testID === undefined ? undefined : `${testID}-toggle`}>

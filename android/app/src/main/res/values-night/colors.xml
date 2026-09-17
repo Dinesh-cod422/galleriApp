@@ -1,0 +1,4 @@
+<resources>
+    <!-- `bg.canvas` in dark mode. See the note in values/colors.xml. -->
+    <color name="app_canvas">#08080C</color>
+</resources>

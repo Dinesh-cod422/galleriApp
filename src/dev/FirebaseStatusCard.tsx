@@ -1,29 +1,37 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   type ConnectionReport,
   checkFirestoreConnection,
 } from '@infra/firebase/connectionCheck';
-import { Badge, Button, Card, Icon, Skeleton, Text, type Theme, useThemedStyles } from '@ds';
+import { Badge, Button, Card, Icon, Skeleton, Text, type AppTheme, createStyles, type Responsive } from '@ds';
 
-const styleFactory = (theme: Theme) => ({
-  body: { padding: theme.spacing.base, gap: theme.spacing.sm },
-  row: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: theme.spacing.sm,
-    flexWrap: 'wrap' as const,
-  },
-  stat: { flexDirection: 'row' as const, justifyContent: 'space-between' as const },
-});
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      body: { padding: HScale.Width_18, gap: HScale.Width_9 },
+      row: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: HScale.Width_9,
+        flexWrap: 'wrap' as const,
+      },
+      stat: { flexDirection: 'row' as const, justifyContent: 'space-between' as const },
+    }),
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 /**
  * Dev-only proof that the native Firebase wiring works: a real read against
  * the real project, rendered in the app rather than asserted in a doc.
  */
 export const FirebaseStatusCard = (): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
   const [report, setReport] = useState<ConnectionReport | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,8 +68,8 @@ export const FirebaseStatusCard = (): React.JSX.Element => {
 
         {loading && (
           <>
-            <Skeleton height={16} width="60%" />
-            <Skeleton height={16} width="40%" />
+            <Skeleton width="60%" />
+            <Skeleton width="40%" />
           </>
         )}
 

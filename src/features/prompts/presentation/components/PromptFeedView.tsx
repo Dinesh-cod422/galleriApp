@@ -3,12 +3,17 @@ import React, { useMemo } from 'react';
 import { isAppError, unknownError } from '@core/errors/AppError';
 import { fireAndForget } from '@core/utils/fireAndForget';
 import { useStableCallback } from '@core/hooks/useStableCallback';
-import { EmptyState, ErrorState, Icon } from '@ds';
+import { EmptyState, ErrorState, Icon, PullToRefresh, createStyles, type Responsive } from '@ds';
 
 import { type usePromptFeed } from '../hooks/usePrompts';
 import { toPromptCardVm } from '../mappers/toPromptCardVm';
 import { PromptMasonryGrid } from './PromptMasonryGrid';
 import { PromptMasonrySkeleton } from './PromptMasonrySkeleton';
+
+const getStyles = (_appTheme: unknown, { IconSize }: Responsive) => ({
+  iconSizes: { xl: IconSize.iconSize_45 },
+});
+const useStyles = createStyles(getStyles);
 
 export type PromptFeedViewProps = {
   feed: ReturnType<typeof usePromptFeed>;
@@ -34,6 +39,7 @@ export const PromptFeedView = ({
 }: PromptFeedViewProps): React.JSX.Element => {
   // Memoized: this array reaches every memoized tile, and remapping it on each
   // render would hand them all new props.
+  const styles = useStyles();
   const items = useMemo(() => feed.items.map(item => toPromptCardVm(item)), [feed.items]);
 
   const onEndReached = useStableCallback(() => {
@@ -45,6 +51,10 @@ export const PromptFeedView = ({
   const retry = useStableCallback(() => {
     fireAndForget(feed.refetch());
   });
+
+  // The same call as `retry`, reached by pulling rather than by tapping an
+  // error. Extracted so both paths cannot drift apart.
+  const onRefresh = retry;
 
   if (feed.isPending) {
     return <PromptMasonrySkeleton />;
@@ -65,7 +75,7 @@ export const PromptFeedView = ({
       <EmptyState
         title={emptyTitle}
         description={emptyDescription}
-        icon={<Icon name="inbox" size={40} color="tertiary" />}
+        icon={<Icon name="inbox" size={styles.iconSizes.xl} color="tertiary" />}
       />
     );
   }
@@ -76,6 +86,9 @@ export const PromptFeedView = ({
       onPressPrompt={onPressPrompt}
       onEndReached={onEndReached}
       testID={testID}
+      refreshControl={
+        <PullToRefresh refreshing={feed.isRefetching ?? false} onRefresh={onRefresh} />
+      }
     />
   );
 };

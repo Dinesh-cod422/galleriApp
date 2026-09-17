@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_TEAM_ID.com.promptkalai"],
+        "components": [
+          { "/": "/prompt/*", "comment": "A single prompt" },
+          { "/": "/category/*", "comment": "One category's wall" },
+          { "/": "/section/*", "comment": "A full section list" },
+          { "/": "/explore", "comment": "Explore tab" },
+          { "/": "/favorites", "comment": "Saved prompts" },
+          { "/": "/profile", "comment": "Profile tab" }
+        ]
+      }
+    ]
+  }
+}

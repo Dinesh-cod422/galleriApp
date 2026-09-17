@@ -1,32 +1,43 @@
 import React, { useCallback } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { FlashList, type FlashListProps } from '@shopify/flash-list';
 
-import { type Theme, useResponsive, useThemedStyles } from '@ds';
+import { type AppTheme, layoutOf, type Responsive, useResponsive, createStyles } from '@ds';
 
 import { type PromptCardVm } from '../mappers/toPromptCardVm';
 import { PromptTile } from './PromptTile';
 
-const styleFactory = (theme: Theme) => {
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const layout = layoutOf(responsive);
   // Half a gap on each cell adds up to a full gap between columns, which is
   // the only way to space a masonry grid: FlashList assigns cells to whichever
   // column is shortest, so no cell can know whether it is on an edge.
-  const inset = theme.layout.gridGap / 2;
+  const inset = layout.gridGap / 2;
 
   return {
+    ...StyleSheet.create({
     content: {
       // What is left over after the cells' own half-gaps, so the outermost
       // cell edges land exactly on the screen gutter.
-      paddingHorizontal: theme.layout.gutter - inset,
-      paddingTop: theme.layout.gridGap,
-      paddingBottom: theme.spacing.huge,
+      paddingHorizontal: layout.gutter - inset,
+      paddingTop: layout.gridGap,
+      // Clears the floating tab bar, which the grid scrolls UNDERNEATH rather
+      // than stopping above — without this the last row sits behind it and
+      // cannot be scrolled into view. From the theme, because the bar's size is
+      // defined there: this was `huge + xxl` here and a literal 120 on two
+      // other screens, three guesses at one number.
+      paddingBottom: layout.tabBarClearance,
     },
     cell: {
       paddingHorizontal: inset,
-      paddingBottom: theme.layout.gridGap,
+      paddingBottom: layout.gridGap,
     },
+    }),
+    layout,
   };
 };
+
+const useStyles = createStyles(getStyles);
 
 export type PromptMasonryGridProps = {
   items: readonly PromptCardVm[];
@@ -63,7 +74,7 @@ export const PromptMasonryGrid = ({
   refreshControl,
   testID,
 }: PromptMasonryGridProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
   const { gridColumns } = useResponsive();
 
   const renderItem = useCallback(

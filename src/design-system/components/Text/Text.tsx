@@ -1,8 +1,20 @@
 import React, { memo } from 'react';
 import { Text as RNText, type StyleProp, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 
-import { useTheme } from '../../theme/ThemeProvider';
-import { type TextVariant } from '../../theme/typography';
+import { createStyles } from '../../theme/createStyles';
+import { type Responsive } from '../../theme/responsive';
+import { type AppTheme } from '../../theme/theme';
+import { buildType, MAX_FONT_SCALE, type TextVariant } from '../../theme/typography';
+
+/**
+ * The ramp is built ONCE per (mode, window) and shared by every <Text> in the
+ * tree — which, on a wall of prompt cards, is a few hundred of them.
+ */
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => ({
+  type: buildType(responsive),
+  palette: appTheme.colors,
+});
+const useStyles = createStyles(getStyles);
 
 /**
  * The ONLY text primitive in the app.
@@ -36,17 +48,17 @@ const TextComponent = ({
   children,
   ...rest
 }: AppTextProps): React.JSX.Element => {
-  const theme = useTheme();
+  const styles = useStyles();
   const resolvedColor =
-    color === 'accent' ? theme.colors.accent.default : theme.colors.text[color];
+    color === 'accent' ? styles.palette.accent.ink : styles.palette.text[color];
 
   return (
     <RNText
-      // `maxFontSizeMultiplier` keeps OS-level huge-text settings from breaking
-      // card layouts, while still honouring accessibility scaling up to 1.4x.
-      maxFontSizeMultiplier={1.4}
+      // Keeps an OS huge-text setting from breaking card layouts while still
+      // honouring it. See MAX_FONT_SCALE — the same ceiling SearchField uses.
+      maxFontSizeMultiplier={MAX_FONT_SCALE}
       {...rest}
-      style={[theme.typography[variant], { color: resolvedColor, textAlign: align }, style]}>
+      style={[styles.type[variant], { color: resolvedColor, textAlign: align }, style]}>
       {children}
     </RNText>
   );

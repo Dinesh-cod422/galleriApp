@@ -14,7 +14,6 @@ const vm = (overrides: Partial<PromptCardVm> = {}): PromptCardVm => ({
   authorName: 'Ada',
   authorAvatarUrl: null,
   categoryName: 'Cyberpunk',
-  likesLabel: '1.2K',
   viewsLabel: '18K',
   dateLabel: '2d ago',
   badge: null,

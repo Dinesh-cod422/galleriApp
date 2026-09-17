@@ -7,6 +7,8 @@ import { fireAndForget } from '@core/utils/fireAndForget';
 import { useStableCallback } from '@core/hooks/useStableCallback';
 import { categoryId as toCategoryId } from '@core/types/branded';
 import { type RootStackParamList } from '@app/navigation/navigation.types';
+import { type PromptSort } from '../../domain/repositories/PromptRepository';
+import { DEFAULT_FEED_SORT, FEED_SORTS } from '../sections';
 import { useCategories } from '../hooks/useCategories';
 import { usePromptFeed } from '../hooks/usePrompts';
 import { toPromptCardVm, type PromptCardVm } from '../mappers/toPromptCardVm';
@@ -23,10 +25,17 @@ export type HomeViewModel = {
   readonly isLoadingCategories: boolean;
   readonly selectedCategoryId: string | null;
   readonly selectedCategoryName: string | null;
+  readonly sort: PromptSort;
+  /** Title of the active ordering, for the label under the masthead. */
+  readonly sortTitle: string;
+  /** True when anything other than the defaults is applied. */
+  readonly isFiltered: boolean;
+  readonly onSelectSort: (sort: PromptSort) => void;
   readonly isFetchingMore: boolean;
   readonly isRefreshing: boolean;
   readonly onSelectCategory: (categoryId: string | null) => void;
   readonly onPressPrompt: (promptId: string) => void;
+  readonly onPressSearch: () => void;
   readonly onEndReached: () => void;
   readonly onRefresh: () => void;
   readonly retry: () => void;
@@ -40,19 +49,25 @@ const asAppError = (error: unknown): AppError =>
  *
  * The screen is deliberately a single stream rather than a set of merchandised
  * rails: the job here is to keep ideas arriving while you scroll, and a rail
- * interrupts that with a fixed, finite set. The only control is the category
- * filter, which narrows the same stream instead of navigating away from it.
+ * interrupts that with a fixed, finite set. Both controls — the category row
+ * and the sort sheet — narrow or reorder that same stream rather than
+ * navigating away from it.
  *
- * The filter lives in `useState`, not a store: nothing outside this screen
- * reads it, and it should reset when the screen is left.
+ * Opening the sheet is NOT here: the screen owns the sheet's ref, and a view
+ * model that reached for an imperative handle would be holding a piece of the
+ * view. It exposes the CHOICE (`onSelectSort`), not the gesture.
+ *
+ * Both selections live in `useState`, not a store: nothing outside this screen
+ * reads them, and they should reset when the screen is left.
  */
 export const useHomeViewModel = (): HomeViewModel => {
   const navigation = useNavigation<Nav>();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [sort, setSort] = useState<PromptSort>(DEFAULT_FEED_SORT);
 
   const categories = useCategories();
   const feed = usePromptFeed({
-    sort: 'newest',
+    sort,
     categoryId: selectedCategoryId === null ? null : toCategoryId(selectedCategoryId),
   });
 
@@ -65,6 +80,13 @@ export const useHomeViewModel = (): HomeViewModel => {
     () => categories.data?.find(c => c.id === selectedCategoryId)?.name ?? null,
     [categories.data, selectedCategoryId],
   );
+
+  const sortTitle = useMemo(
+    () => FEED_SORTS.find(option => option.sort === sort)?.title ?? '',
+    [sort],
+  );
+
+  const isFiltered = sort !== DEFAULT_FEED_SORT || selectedCategoryId !== null;
 
   const status: HomeStatus = feed.isPending
     ? 'loading'
@@ -82,6 +104,19 @@ export const useHomeViewModel = (): HomeViewModel => {
 
   const onPressPrompt = useStableCallback((promptId: string) => {
     navigation.navigate('PromptDetail', { promptId });
+  });
+
+  const onPressSearch = useStableCallback(() => {
+    navigation.navigate('Search');
+  });
+
+  /**
+   * Opening the sheet is the SCREEN's job, not the view model's — it owns the
+   * ref. This stays in the contract so the header keeps one prop shape, and so
+   * a future filter surface (a full page, say) changes one line here.
+   */
+  const onSelectSort = useStableCallback((next: PromptSort) => {
+    setSort(next);
   });
 
   const onEndReached = useStableCallback(() => {
@@ -106,10 +141,15 @@ export const useHomeViewModel = (): HomeViewModel => {
     isLoadingCategories: categories.isPending,
     selectedCategoryId,
     selectedCategoryName,
+    sort,
+    sortTitle,
+    isFiltered,
+    onSelectSort,
     isFetchingMore: feed.isFetchingNextPage,
     isRefreshing: feed.isRefetching && !feed.isFetchingNextPage,
     onSelectCategory,
     onPressPrompt,
+    onPressSearch,
     onEndReached,
     onRefresh,
     retry,

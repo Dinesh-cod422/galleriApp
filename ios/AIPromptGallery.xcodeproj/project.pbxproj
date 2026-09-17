@@ -19,6 +19,7 @@
 		13B07F961A680F5B00A75B9A /* AIPromptGallery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIPromptGallery.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = AIPromptGallery/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = AIPromptGallery/Info.plist; sourceTree = "<group>"; };
+		AB01C0DE2CA45674006654EE /* AIPromptGallery.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; name = AIPromptGallery.entitlements; path = AIPromptGallery/AIPromptGallery.entitlements; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = AIPromptGallery/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-AIPromptGallery.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AIPromptGallery.debug.xcconfig"; path = "Target Support Files/Pods-AIPromptGallery/Pods-AIPromptGallery.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-AIPromptGallery.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AIPromptGallery.release.xcconfig"; path = "Target Support Files/Pods-AIPromptGallery/Pods-AIPromptGallery.release.xcconfig"; sourceTree = "<group>"; };
@@ -47,6 +48,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
+				AB01C0DE2CA45674006654EE /* AIPromptGallery.entitlements */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				82575B853D93A8A45D46C7D4 /* GoogleService-Info.plist */,
@@ -291,7 +293,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.aipromptgallery;
+				CODE_SIGN_ENTITLEMENTS = AIPromptGallery/AIPromptGallery.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = com.promptkalai;
 				PRODUCT_NAME = AIPromptGallery;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -320,7 +323,8 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.aipromptgallery;
+				CODE_SIGN_ENTITLEMENTS = AIPromptGallery/AIPromptGallery.entitlements;
+				PRODUCT_BUNDLE_IDENTIFIER = com.promptkalai;
 				PRODUCT_NAME = AIPromptGallery;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;

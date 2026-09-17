@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -6,6 +6,7 @@ import { useStableCallback } from '@core/hooks/useStableCallback';
 import { type RootStackParamList } from '@app/navigation/navigation.types';
 
 import { useSectionPrompts } from '../hooks/usePrompts';
+import { type SuggestionLedger } from '../hooks/useSuggestionLedger';
 import { toPromptCardVm } from '../mappers/toPromptCardVm';
 import { type PromptSectionDef } from '../sections';
 import { PromptRail } from './PromptRail';
@@ -14,6 +15,12 @@ export type PromptSectionRailProps = {
   section: PromptSectionDef;
   /** The prompt currently on screen — never shown inside its own sections. */
   excludeId: string;
+  /**
+   * Position among the strips. Lower ranks claim prompts first, so a contested
+   * one stays where it is most relevant.
+   */
+  rank: number;
+  ledger: SuggestionLedger;
 };
 
 /**
@@ -27,11 +34,22 @@ export type PromptSectionRailProps = {
 export const PromptSectionRail = ({
   section,
   excludeId,
+  rank,
+  ledger,
 }: PromptSectionRailProps): React.JSX.Element | null => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const query = useSectionPrompts(section.sort, excludeId);
+  const excluded = ledger.excludedFor(rank);
+  const query = useSectionPrompts(section.sort, excludeId, excluded);
 
   const items = useMemo(() => query.items.map(item => toPromptCardVm(item)), [query.items]);
+
+  // Publish what this strip settled on, so the ones below skip these. Keyed on
+  // the ids themselves: the ledger ignores a claim that has not changed, which
+  // is what stops this from looping.
+  const shownIds = useMemo(() => items.map(item => item.id), [items]);
+  useEffect(() => {
+    ledger.claim(rank, shownIds);
+  }, [ledger, rank, shownIds]);
 
   const onPressPrompt = useStableCallback((promptId: string) => {
     // push, not navigate: tapping through several prompts should build a back
@@ -52,6 +70,7 @@ export const PromptSectionRail = ({
   return (
     <PromptRail
       title={section.title}
+      icon={section.icon}
       items={items}
       loading={query.isPending}
       onPressPrompt={onPressPrompt}

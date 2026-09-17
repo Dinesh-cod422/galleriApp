@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Universal Links. iOS fetches /.well-known/apple-app-site-association from
+	  each domain and only opens the app if this bundle id appears in it under
+	  the right team id, so BOTH sides have to agree before links leave Safari.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:notesapp-ed63a.web.app</string>
+		<string>applinks:notesapp-ed63a.firebaseapp.com</string>
+	</array>
+</dict>
+</plist>

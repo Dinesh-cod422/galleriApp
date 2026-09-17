@@ -38,12 +38,52 @@ component from quietly depending on `metadata.generationParameters` and making
 the future split impossible. Section 8 covers the escape hatch if document size
 ever becomes the problem.
 
-### 0.2 Counters are written by Cloud Functions, never by clients
+### 0.2 Counters — membership by Function, engagement by client
 
-Full reasoning in section 5.4. Short version: clients write only their own
-`likes/{uid}` document; a Function translates that into
-`FieldValue.increment(±1)` on the parent. Clients never hold write access to
-`stats.*`.
+**Likes and favourites** work as section 5.4 describes: clients write only their
+own `likes/{uid}` document and never hold write access to `stats.likesCount`.
+
+**Views, copies and shares are different**, and the rules already reflect it
+(`isCounterWrite('viewsCount', 1)` and friends). There is no membership
+document to validate them against, and Cloud Functions need billing this
+project does not have, so the client writes them directly. That makes them
+**vanity metrics**: trustworthy only to the degree App Check makes them.
+
+Writing them from the client creates three failure modes that do not exist with
+a Function in the middle. See §0.2.1.
+
+#### 0.2.1 Surviving a user who holds the button down
+
+A naive implementation — one `increment(1)` per tap — breaks in three ways, and
+none of them are theoretical:
+
+| Failure | Why it happens | Fix in this codebase |
+|---|---|---|
+| **Request per tap** | Nothing sits between the gesture and the network. 100 taps is 100 writes, billed and queued. | `engagementFlusher` coalesces a 2s window into one `increment(n)`. |
+| **Hot document** | Firestore sustains roughly **one write per second per document**. A popular prompt plus many devices means contention, and writes start failing for *everyone*. | Coalescing cuts each device to ≤1 write per prompt per 2s; the flusher also sends **sequentially**, never in parallel. |
+| **Retry loop** | A write that always fails — which is the case today, since the rules require a signed-in user — retried eagerly is a battery and quota drain. | Exponential backoff with **full jitter**, capped at 5 minutes. Jitter matters: without it every device that failed during an outage retries in the same instant and recreates it. |
+
+Three further bounds exist so a runaway client cannot produce a number nobody
+believes:
+
+- **A 2s cooldown per prompt per counter** (`useEngagement`). Someone mashing
+  Copy counts once. Someone genuinely copying twice still counts twice.
+- **A 1,000 cap per counter** in the ledger, for anything that bypasses the
+  cooldown.
+- **A 250 cap per request** (`MAX_INCREMENT`), so a tampered client cannot turn
+  one request into a million views.
+
+**What this deliberately does NOT do** is shard the counter. The standard fix
+for a genuinely hot counter is Firestore's distributed-counter pattern — N shard
+documents, each client incrementing a random one, summed on read. It is not here
+because summing shards costs N reads on *every* detail view, which is a real,
+permanent cost to solve a problem that begins only above ~1 sustained write per
+second on a single prompt. Revisit it if a prompt ever gets that hot; the
+repository interface (`incrementStat`) is the only thing that would change.
+
+**The remaining hole is authenticity, not volume.** Nothing above stops someone
+scripting the API directly rather than using the app. That is what **App Check**
+is for, and it is not yet enabled.
 
 ### 0.3 Pagination cursors are values, not snapshots
 

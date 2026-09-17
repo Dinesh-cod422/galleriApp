@@ -49,6 +49,14 @@ ESLint fails the build on:
 - `@features`, `@infra`, `@app` imported from `design-system/**`
 - a raw hex color or a hardcoded `fontSize` anywhere outside `design-system/theme/`
 
+## Documents
+
+| | |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layering, boundaries and why they are enforced |
+| [FIREBASE-ARCHITECTURE.md](docs/FIREBASE-ARCHITECTURE.md) | Firestore schema, queries, security rules |
+| [DEEP-LINKING-AND-HOSTING.md](docs/DEEP-LINKING-AND-HOSTING.md) | Identifiers, image CDN, App Links / Universal Links, deploy safety |
+
 ## Layout
 
 ```
@@ -90,8 +98,9 @@ Connected to Firebase project **`notesapp-ed63a`**.
 
 | | Value |
 |---|---|
-| Android package | `com.aipromptgallery` |
-| iOS bundle id | `com.aipromptgallery` (changed from the RN template default) |
+| Android package | `com.promptkalai` |
+| iOS bundle id | `com.promptkalai` |
+| RN component / Xcode target | `AIPromptGallery` — the *project* name, deliberately NOT renamed with the bundle id |
 | Firestore | 32 prompts, 8 categories, 10 users (seeded — see [tools/seed](tools/seed)) |
 
 Native config files (`android/app/google-services.json`,

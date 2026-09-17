@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import React, { memo, useCallback } from 'react';
 import Animated, {
   useAnimatedStyle,
@@ -7,12 +8,34 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { haptics } from '@infra/haptics/haptics';
-import { Icon, IconButton } from '@ds';
+import { Icon, IconButton, type AppTheme, createStyles, type Responsive } from '@ds';
 
 import { useIsFavorite, useToggleFavorite } from '../stores/favoritesStore';
 
 const POP_OUT = { damping: 8, stiffness: 500, mass: 0.5 };
 const POP_BACK = { damping: 14, stiffness: 380, mass: 0.5 };
+
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale, IconSize } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      // A fixed circle rather than the default touch-target square: on a tile this
+      // reads as a control sitting ON the photograph, and the round scrim is what
+      // separates a white glyph from whatever is behind it.
+      button: {
+        width: HScale.Width_46,
+        height: HScale.Width_46,
+        minWidth: HScale.Width_46,
+        minHeight: HScale.Width_46,
+        borderRadius: 999,
+      },
+    }),
+    iconSizes: { lg: IconSize.iconSize_24 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type FavoriteButtonProps = {
   promptId: string;
@@ -32,6 +55,7 @@ const FavoriteButtonComponent = ({
   promptId,
   promptTitle,
 }: FavoriteButtonProps): React.JSX.Element => {
+  const styles = useStyles();
   const isFavorite = useIsFavorite(promptId);
   const toggle = useToggleFavorite();
   const scale = useSharedValue(1);
@@ -49,6 +73,7 @@ const FavoriteButtonComponent = ({
   return (
     <IconButton
       variant="overlay"
+      style={styles.button}
       onPress={onPress}
       accessibilityLabel={
         isFavorite ? `Remove ${promptTitle} from favorites` : `Add ${promptTitle} to favorites`
@@ -57,7 +82,7 @@ const FavoriteButtonComponent = ({
       <Animated.View style={animatedStyle}>
         <Icon
           name={isFavorite ? 'heartFilled' : 'heart'}
-          size={20}
+          size={styles.iconSizes.lg}
           // White, not `tertiary`: this sits on an arbitrary photograph behind
           // a scrim that is dark in both themes, so the icon cannot take its
           // colour from the theme's text ramp.

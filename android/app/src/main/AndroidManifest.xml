@@ -17,10 +17,61 @@
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
-        android:exported="true">
+        android:exported="true"
+        android:theme="@style/BootTheme">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+
+        <!--
+          Custom scheme: promptkalai://prompt/<id>
+
+          Always works, with no server and no verification, which makes it the
+          reliable target for QR codes, other apps and local testing. It is NOT
+          a substitute for the https filter below: a promptkalai:// link does nothing
+          at all on a device without the app.
+        -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="promptkalai" />
+        </intent-filter>
+
+        <!--
+          Android App Links: https://notesapp-ed63a.web.app/prompt/<id>
+
+          `autoVerify` makes Android fetch /.well-known/assetlinks.json from
+          each host at install time and, if the signing fingerprint matches,
+          open these URLs in the app with no chooser dialog. Until that file is
+          published the links simply open the browser — the right fallback, and
+          the reason shared URLs use https rather than the custom scheme.
+        -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+            <data android:host="notesapp-ed63a.web.app" />
+            <data android:host="notesapp-ed63a.firebaseapp.com" />
+
+            <!--
+              Only the paths the app can actually render, mirroring the
+              `components` list in apple-app-site-association.
+
+              Claiming the whole host instead would take over the website: any
+              other page on the domain - and the root itself - would open the
+              app, which then has no route for it and lands on Home with the
+              link silently dropped. Android combines the data attributes in a
+              filter as a cross product, so these paths apply to both hosts.
+            -->
+            <data android:pathPrefix="/prompt/" />
+            <data android:pathPrefix="/category/" />
+            <data android:pathPrefix="/section/" />
+            <data android:path="/explore" />
+            <data android:path="/favorites" />
+            <data android:path="/profile" />
         </intent-filter>
       </activity>
     </application>

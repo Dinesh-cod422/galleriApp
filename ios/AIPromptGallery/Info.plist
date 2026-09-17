@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>PromptKalai</string>
+	<string>Prompt Kalai</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -56,5 +56,21 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- Registers promptkalai:// so iOS knows this app owns the scheme. Universal
+	     Links need no entry here; they are declared by the associated-domains
+	     entitlement instead. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.promptkalai</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>promptkalai</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

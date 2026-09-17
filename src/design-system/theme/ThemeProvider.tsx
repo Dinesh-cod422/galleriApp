@@ -1,14 +1,13 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { useResponsive } from '../responsive/useResponsive';
-import { createTheme, type Theme, type ThemeMode } from './theme';
+import { createTheme, type AppTheme, type ThemeMode } from './theme';
 
 /** What the user chose. 'system' follows the OS and is the default. */
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 type ThemeContextValue = {
-  readonly theme: Theme;
+  readonly theme: AppTheme;
   readonly preference: ThemePreference;
   readonly setPreference: (preference: ThemePreference) => void;
 };
@@ -23,24 +22,46 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider = ({
   children,
   initialPreference = 'system',
+  onPreferenceChange,
 }: {
   children: React.ReactNode;
   initialPreference?: ThemePreference;
+  /**
+   * Called whenever the choice changes, so it can be persisted.
+   *
+   * A callback rather than storage: the design system is forbidden from
+   * importing `@infra`, and rightly so — it should not know whether the app
+   * keeps preferences in MMKV, on a server, or nowhere at all. `app/providers`
+   * decides that and passes the result back in as `initialPreference`.
+   */
+  onPreferenceChange?: (preference: ThemePreference) => void;
 }): React.JSX.Element => {
   const systemScheme = useColorScheme();
-  const { breakpoint } = useResponsive();
-  const [preference, setPreference] = useState<ThemePreference>(initialPreference);
+  const [preference, setPreferenceState] = useState<ThemePreference>(initialPreference);
+
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      setPreferenceState(next);
+      onPreferenceChange?.(next);
+    },
+    [onPreferenceChange],
+  );
 
   const value = useMemo<ThemeContextValue>(() => {
     const resolved: ThemeMode =
       preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
 
     return {
-      theme: createTheme(resolved, breakpoint),
+      /*
+       * Colour only. Size is no longer the theme's business: a style factory
+       * takes `responsive` as its second argument and reads the package's maps
+       * directly, so nothing here has to know how big the window is.
+       */
+      theme: createTheme(resolved),
       preference,
       setPreference,
     };
-  }, [preference, systemScheme, breakpoint]);
+  }, [preference, setPreference, systemScheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -55,4 +76,4 @@ export const useThemeContext = (): ThemeContextValue => {
   return context;
 };
 
-export const useTheme = (): Theme => useThemeContext().theme;
+export const useTheme = (): AppTheme => useThemeContext().theme;

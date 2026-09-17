@@ -7,6 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ShimmerProvider, ThemeProvider, useTheme } from '@ds';
 
 import { QueryProvider } from './QueryProvider';
+import { readThemePreference, writeThemePreference } from './themePreferenceStorage';
 
 /**
  * The composition root's provider stack. Order is not arbitrary:
@@ -31,7 +32,9 @@ const styles = StyleSheet.create({ root: { flex: 1 } });
 export const AppProviders = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
   <GestureHandlerRootView style={styles.root}>
     <SafeAreaProvider>
-      <ThemeProvider>
+      <ThemeProvider
+        initialPreference={readThemePreference()}
+        onPreferenceChange={writeThemePreference}>
         <QueryProvider>
           <ShimmerProvider>
             <BottomSheetModalProvider>

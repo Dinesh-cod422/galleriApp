@@ -34,6 +34,20 @@ const site = 'https://notesapp-ed63a.web.app/';
 const localPath = (url) =>
   url.startsWith(site) ? fileURLToPath(new URL(`hosting/${url.slice(site.length)}`, root)) : null;
 
+/**
+ * The association files must ship on EVERY deploy. Firebase auto-serves its own
+ * /.well-known/assetlinks.json for the app registered in the project (a
+ * different app entirely), and that generated file comes back the moment ours
+ * stops being deployed — silently un-verifying every App Link.
+ */
+const REQUIRED = ['.well-known/assetlinks.json', '.well-known/apple-app-site-association'];
+const absent = REQUIRED.filter((rel) => !existsSync(fileURLToPath(new URL(`hosting/${rel}`, root))));
+if (absent.length > 0) {
+  console.error(`DEPLOY BLOCKED — missing ${absent.join(', ')}`);
+  console.error('Without these, Firebase falls back to its own generated file and App Links stop verifying.');
+  exit(1);
+}
+
 let expected = 0;
 const missing = [];
 for (const entry of Object.values(manifest)) {

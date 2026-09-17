@@ -1,31 +1,10 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
 
 import { networkError, notFoundError } from '@core/errors/AppError';
 
 import { FirebaseStatusCard } from './FirebaseStatusCard';
-import {
-  AppImage,
-  Avatar,
-  Badge,
-  BottomSheet,
-  type BottomSheetRef,
-  Button,
-  Card,
-  Divider,
-  EmptyState,
-  ErrorState,
-  Icon,
-  IconButton,
-  Screen,
-  Skeleton,
-  Text,
-  type Theme,
-  type ThemePreference,
-  useResponsive,
-  useThemeContext,
-  useThemedStyles,
-} from '@ds';
+import { AppImage, Avatar, Badge, BottomSheet, type BottomSheetRef, Button, Card, Divider, EmptyState, ErrorState, Icon, IconButton, Screen, Skeleton, Text, type AppTheme, type ThemePreference, useResponsive, useThemeContext, createStyles, type Responsive } from '@ds';
 
 /**
  * Phase 1's definition of done, and a permanent regression surface: every
@@ -35,50 +14,63 @@ import {
  *
  * Not shipped in release builds — Phase 3 drops it behind a dev-only route.
  */
-const styleFactory = (theme: Theme) => ({
-  scroll: {
-    paddingBottom: theme.spacing.huge,
-    gap: theme.spacing.xl,
-  },
-  section: {
-    gap: theme.spacing.md,
-  },
-  row: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    flexWrap: 'wrap' as const,
-    gap: theme.spacing.sm,
-  },
-  cardBody: {
-    padding: theme.spacing.base,
-    gap: theme.spacing.xs,
-  },
-  stateBox: {
-    height: 200,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.bg.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border.subtle,
-  },
-  swatchRow: {
-    flexDirection: 'row' as const,
-    gap: theme.spacing.xs,
-  },
-  swatch: {
-    flex: 1,
-    height: 44,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border.subtle,
-  },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS, HScale, IconSize, VScale } = responsive;
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      scroll: {
+        paddingBottom: VScale.Height_76,
+        gap: HScale.Width_28,
+      },
+      section: {
+        gap: HScale.Width_14,
+      },
+      row: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        flexWrap: 'wrap' as const,
+        gap: HScale.Width_9,
+      },
+      cardBody: {
+        padding: HScale.Width_18,
+        gap: HScale.Width_5,
+      },
+      stateBox: {
+        height: VScale.Height_237,
+        borderRadius: BORDER_RADIUS.radius_41,
+        backgroundColor: p.bg.surface,
+        borderWidth: 1,
+        borderColor: p.border.subtle,
+      },
+      swatchRow: {
+        flexDirection: 'row' as const,
+        gap: HScale.Width_5,
+      },
+      swatch: {
+        flex: 1,
+        height: HScale.Width_51,
+        borderRadius: BORDER_RADIUS.radius_15,
+        borderWidth: 1,
+        borderColor: p.border.subtle,
+      },
+    }),
+    palette: p,
+    iconSizes: { xl: IconSize.iconSize_45 },
+    metrics: { title: VScale.Height_21, media: VScale.Height_166 },
+    radii: { md: BORDER_RADIUS.radius_26 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 const PREFERENCES: readonly ThemePreference[] = ['system', 'light', 'dark'];
 
 const SAMPLE_IMAGE = 'https://picsum.photos/seed/kitchen-sink/600/400';
 
 export const KitchenSinkScreen = (): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
   const { theme, preference, setPreference } = useThemeContext();
   const { breakpoint, width, gridColumns, isTablet } = useResponsive();
   const sheetRef = useRef<BottomSheetRef>(null);
@@ -142,10 +134,10 @@ export const KitchenSinkScreen = (): React.JSX.Element => {
         <View style={styles.section}>
           <Text variant="h2">Surfaces</Text>
           <View style={styles.swatchRow}>
-            <View style={[styles.swatch, { backgroundColor: theme.colors.bg.canvas }]} />
-            <View style={[styles.swatch, { backgroundColor: theme.colors.bg.surface }]} />
-            <View style={[styles.swatch, { backgroundColor: theme.colors.bg.subtle }]} />
-            <View style={[styles.swatch, { backgroundColor: theme.colors.accent.default }]} />
+            <View style={[styles.swatch, { backgroundColor: styles.palette.bg.canvas }]} />
+            <View style={[styles.swatch, { backgroundColor: styles.palette.bg.surface }]} />
+            <View style={[styles.swatch, { backgroundColor: styles.palette.bg.subtle }]} />
+            <View style={[styles.swatch, { backgroundColor: styles.palette.accent.default }]} />
           </View>
         </View>
 
@@ -216,9 +208,9 @@ export const KitchenSinkScreen = (): React.JSX.Element => {
           <Text variant="h2">Skeletons</Text>
           <Card>
             <View style={styles.cardBody}>
-              <Skeleton height={140} borderRadius={theme.radius.md} />
-              <Skeleton height={18} width="70%" />
-              <Skeleton height={14} width="45%" />
+              <Skeleton height={styles.metrics.media} borderRadius={styles.radii.md} />
+              <Skeleton height={styles.metrics.title} width="70%" />
+              <Skeleton width="45%" />
             </View>
           </Card>
         </View>
@@ -229,7 +221,7 @@ export const KitchenSinkScreen = (): React.JSX.Element => {
             <EmptyState
               title="No favorites yet"
               description="Tap the heart on any prompt to keep it here."
-              icon={<Icon name="inbox" size={40} color="tertiary" />}
+              icon={<Icon name="inbox" size={styles.iconSizes.xl} color="tertiary" />}
               actionLabel="Browse prompts"
               onAction={bump}
             />

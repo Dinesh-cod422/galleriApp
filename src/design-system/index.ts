@@ -9,17 +9,17 @@
 
 // Theme
 export { ThemeProvider, useTheme, useThemeContext, type ThemePreference } from './theme/ThemeProvider';
-export { useThemedStyles } from './theme/useThemedStyles';
-export { createTheme, darkTheme, lightTheme, type Theme, type ThemeMode } from './theme/theme';
+export { createStyles, type StyleFactory } from './theme/createStyles';
+export { type Responsive, useResponsiveTokens } from './theme/responsive';
+export { layoutOf, type Layout } from './theme/layout';
+export { createTheme, darkTheme, lightTheme, type AppTheme, type ThemeMode } from './theme/theme';
 export { type ColorTokens } from './theme/colors';
-export { type TextVariant } from './theme/typography';
+export { buildType, MAX_FONT_SCALE, type TextVariant, type Typography } from './theme/typography';
 export { type ShadowToken } from './theme/shadows';
-export { type SpacingToken } from './theme/spacing';
-export { type RadiusToken } from './theme/radius';
 
 // Responsive
 export { useResponsive, type ResponsiveInfo } from './responsive/useResponsive';
-export { type Breakpoint } from './responsive/breakpoints';
+export { type Breakpoint, resolveBreakpoint } from './responsive/breakpoints';
 export { gridCellWidth } from './responsive/grid';
 
 // Animation primitives
@@ -43,7 +43,14 @@ export {
   type ExpandableTextProps,
 } from './components/ExpandableText/ExpandableText';
 export { Screen, type ScreenProps } from './components/Screen/Screen';
+export {
+  AmbientBackground,
+  type AmbientBackgroundProps,
+} from './components/AmbientBackground/AmbientBackground';
+export { PullToRefresh, type PullToRefreshProps } from './components/PullToRefresh/PullToRefresh';
 export { AppImage, type AppImageProps, type ImagePriority } from './components/AppImage/AppImage';
+export { BrandMark, type BrandMarkProps } from './components/BrandMark/BrandMark';
+export { SearchField, type SearchFieldProps } from './components/SearchField/SearchField';
 
 // Icons
 export { Icon, type IconName, type IconProps } from './icons/Icon';

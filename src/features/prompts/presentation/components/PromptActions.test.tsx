@@ -8,13 +8,18 @@ import { PromptActions } from './PromptActions';
 
 const PROMPT = 'A narrow Tokyo backstreet at night after rain, 35mm';
 
+const onCopied = jest.fn();
+const onShared = jest.fn();
+
 const setup = (promptText = PROMPT) =>
   renderWithTheme(
     <PromptActions
       title="Tokyo backstreet in the rain"
       promptText={promptText}
-      imageUrl="https://example.test/full.webp"
+      shareUrl="https://notesapp-ed63a.web.app/prompt/p1"
       authorName="Nora Haddad"
+      onCopied={onCopied}
+      onShared={onShared}
     />,
   );
 
@@ -62,7 +67,7 @@ describe('PromptActions', () => {
     expect(screen.queryByText('Copied')).toBeNull();
   });
 
-  it('shares the prompt with its attribution and image', async () => {
+  it('shares a link to the prompt, with its text and attribution', async () => {
     const shareSpy = jest
       .spyOn(Share, 'share')
       .mockResolvedValue({ action: Share.sharedAction, activityType: undefined });
@@ -75,7 +80,9 @@ describe('PromptActions', () => {
     const [content] = shareSpy.mock.calls[0] ?? [];
     expect(content?.message).toContain(PROMPT);
     expect(content?.message).toContain('Nora Haddad');
-    expect(content).toMatchObject({ url: 'https://example.test/full.webp' });
+    // The prompt's page, not its picture: sharing the raw image left the
+    // recipient with a JPEG and no way back to the prompt it belongs to.
+    expect(content).toMatchObject({ url: 'https://notesapp-ed63a.web.app/prompt/p1' });
     shareSpy.mockRestore();
   });
 
@@ -113,5 +120,54 @@ describe('PromptActions', () => {
     fireEvent.press(screen.getByTestId('copy-prompt'));
 
     expect(setString).not.toHaveBeenCalled();
+  });
+
+  describe('engagement callbacks', () => {
+    it('reports a copy so it can be counted', () => {
+      setup();
+
+      fireEvent.press(screen.getByTestId('copy-prompt'));
+
+      expect(onCopied).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * A copy that never reached the clipboard is not a copy. Counting the press
+     * would inflate the number with failures the user can see did not work.
+     */
+    it('does not report a copy that failed', () => {
+      setString.mockImplementationOnce(() => {
+        throw new Error('permission denied');
+      });
+
+      setup();
+      fireEvent.press(screen.getByTestId('copy-prompt'));
+
+      expect(onCopied).not.toHaveBeenCalled();
+    });
+
+    it('reports a share once the sheet completes', async () => {
+      jest
+        .spyOn(Share, 'share')
+        .mockResolvedValue({ action: Share.sharedAction, activityType: undefined });
+
+      setup();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('share-prompt'));
+      });
+
+      expect(onShared).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not report a share that could not be opened', async () => {
+      jest.spyOn(Share, 'share').mockRejectedValue(new Error('no sheet'));
+
+      setup();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('share-prompt'));
+      });
+
+      expect(onShared).not.toHaveBeenCalled();
+    });
   });
 });

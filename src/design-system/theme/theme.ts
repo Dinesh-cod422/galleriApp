@@ -1,76 +1,54 @@
-import {
-  type Breakpoint,
-  gridColumnsForBreakpoint,
-  maxContentWidthForBreakpoint,
-  scaleForBreakpoint,
-} from '../responsive/breakpoints';
 import { type ColorTokens, darkColors, lightColors } from './colors';
-import { radius, type Radius } from './radius';
 import { createShadows, type Shadows } from './shadows';
-import { createSpacing, type Spacing } from './spacing';
-import { createTypography, type Typography } from './typography';
 
 export type ThemeMode = 'light' | 'dark';
 
-export type Theme = {
+/**
+ * What a style factory gets in its FIRST argument: colour, and nothing else.
+ *
+ * The split is the point. A factory reads two things — what colour something
+ * is, and how big it is — and they change for different reasons: colour with
+ * the theme mode, size with the window. Keeping them in separate arguments is
+ * what lets `createStyles` cache on `mode|WxH` and share one sheet across every
+ * instance of a component.
+ *
+ * Every length now comes from the second argument, `responsive`, which is the
+ * package's own token maps. There is no `spacing`, `radius`, `control` or
+ * `icon` here any more: a factory writes `HScale.Width_18` where it used to
+ * write `theme.spacing.base`.
+ */
+export type AppTheme = {
   readonly mode: ThemeMode;
-  readonly breakpoint: Breakpoint;
+  readonly isDark: boolean;
   readonly colors: ColorTokens;
-  readonly spacing: Spacing;
-  readonly radius: Radius;
-  readonly typography: Typography;
   readonly shadows: Shadows;
-  readonly layout: {
-    /** Horizontal screen padding. Set once, never re-derived per screen. */
-    readonly gutter: number;
-    readonly gridGap: number;
-    readonly gridColumns: number;
-    readonly maxContentWidth: number;
-    /** Apple HIG / Material both land near 44–48dp. */
-    readonly minTouchTarget: number;
-  };
 };
 
 /**
- * Theme objects are cached by (mode, breakpoint).
+ * Two objects for the life of the process.
  *
- * This matters for performance, not tidiness: `useThemedStyles` memoizes on
- * theme IDENTITY. If the provider built a fresh object each render, every
- * StyleSheet in the tree would be recreated on every render — which in a list
- * of image cards is exactly the work we are trying to avoid.
+ * `createStyles` keys its cache partly on identity of what this returns, and
+ * the provider hands it straight to consumers — so a fresh object per call
+ * would rebuild every sheet in the tree on every render.
  */
-const cache = new Map<string, Theme>();
-
-export const createTheme = (mode: ThemeMode, breakpoint: Breakpoint): Theme => {
-  const key = `${mode}:${breakpoint}`;
-  const cached = cache.get(key);
-  if (cached) {
-    return cached;
-  }
-
-  const scale = scaleForBreakpoint[breakpoint];
-  const spacing = createSpacing(scale);
-
-  const theme: Theme = {
-    mode,
-    breakpoint,
-    colors: mode === 'dark' ? darkColors : lightColors,
-    spacing,
-    radius,
-    typography: createTypography(scale),
-    shadows: createShadows(mode),
-    layout: {
-      gutter: spacing.base,
-      gridGap: spacing.md,
-      gridColumns: gridColumnsForBreakpoint[breakpoint],
-      maxContentWidth: maxContentWidthForBreakpoint[breakpoint],
-      minTouchTarget: 44,
-    },
-  };
-
-  cache.set(key, theme);
-  return theme;
+const THEMES: Record<ThemeMode, AppTheme> = {
+  light: {
+    mode: 'light',
+    isDark: false,
+    colors: lightColors,
+    shadows: createShadows('light'),
+  },
+  dark: {
+    mode: 'dark',
+    isDark: true,
+    colors: darkColors,
+    shadows: createShadows('dark'),
+  },
 };
 
-export const lightTheme = createTheme('light', 'md');
-export const darkTheme = createTheme('dark', 'md');
+export const createTheme = (mode: ThemeMode): AppTheme => THEMES[mode];
+
+export const lightTheme = THEMES.light;
+export const darkTheme = THEMES.dark;
+
+export type { ColorTokens };

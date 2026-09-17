@@ -54,7 +54,6 @@ export type PromptCardVm = {
   readonly authorName: string;
   readonly authorAvatarUrl: string | null;
   readonly categoryName: string;
-  readonly likesLabel: string;
   readonly viewsLabel: string;
   readonly dateLabel: string;
   readonly badge: PromptBadge | null;
@@ -68,7 +67,6 @@ export const toPromptCardVm = (item: PromptListItem, now = Date.now()): PromptCa
   authorName: item.author.name,
   authorAvatarUrl: item.author.avatarUrl,
   categoryName: item.categoryName,
-  likesLabel: formatCount(item.stats.likesCount),
   viewsLabel: formatCount(item.stats.viewsCount),
   dateLabel: formatRelativeDate(item.createdAt, now),
   badge: toPromptBadge(item, now),

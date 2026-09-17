@@ -1,18 +1,30 @@
 import React, { memo } from 'react';
-import { type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
 import { useShimmerProgress } from '../../animation/ShimmerProvider';
-import { type Theme } from '../../theme/theme';
-import { useTheme } from '../../theme/ThemeProvider';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 
-const styleFactory = (theme: Theme) => ({
-  root: {
-    backgroundColor: theme.colors.skeleton.base,
-    borderRadius: theme.radius.sm,
-  },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS, VScale } = responsive;
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      root: {
+        backgroundColor: p.skeleton.base,
+        borderRadius: BORDER_RADIUS.radius_15,
+      },
+    }),
+    palette: p,
+    metrics: { line: VScale.Height_17 },
+    radii: { sm: BORDER_RADIUS.radius_15 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type SkeletonProps = {
   width?: DimensionValue;
@@ -33,13 +45,12 @@ export type SkeletonProps = {
  */
 const SkeletonComponent = ({
   width = '100%',
-  height = 16,
+  height,
   borderRadius,
   style,
   testID,
 }: SkeletonProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
+  const styles = useStyles();
   const progress = useShimmerProgress();
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -53,7 +64,13 @@ const SkeletonComponent = ({
       accessibilityLabel="Loading"
       style={[
         styles.root,
-        { width, height, borderRadius: borderRadius ?? theme.radius.sm },
+        {
+          width,
+          // A bar with no height stands in for a line of body text, which is
+          // what almost every skeleton is.
+          height: height ?? styles.metrics.line,
+          borderRadius: borderRadius ?? styles.radii.sm,
+        },
         animatedStyle,
         style,
       ]}

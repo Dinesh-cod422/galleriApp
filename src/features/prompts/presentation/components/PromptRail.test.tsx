@@ -14,7 +14,6 @@ const vm = (id: string): PromptCardVm => ({
   authorName: 'Ada',
   authorAvatarUrl: null,
   categoryName: 'Photography',
-  likesLabel: '1.2K',
   viewsLabel: '18K',
   dateLabel: '2d ago',
   badge: null,

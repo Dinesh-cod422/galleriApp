@@ -1,27 +1,36 @@
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { type Theme } from '../../theme/theme';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 import { Button } from '../Button/Button';
 import { Text } from '../Text/Text';
 
-const styleFactory = (theme: Theme) => ({
-  root: {
-    flex: 1,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.xxl,
-    gap: theme.spacing.sm,
-  },
-  icon: {
-    marginBottom: theme.spacing.sm,
-  },
-  action: {
-    marginTop: theme.spacing.base,
-  },
-});
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale, VScale } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      root: {
+        flex: 1,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        paddingHorizontal: HScale.Width_28,
+        paddingVertical: VScale.Height_38,
+        gap: HScale.Width_9,
+      },
+      icon: {
+        marginBottom: VScale.Height_9,
+      },
+      action: {
+        marginTop: VScale.Height_19,
+      },
+    }),
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type EmptyStateProps = {
   title: string;
@@ -41,7 +50,7 @@ export const EmptyState = ({
   onAction,
   testID,
 }: EmptyStateProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
 
   return (
     <View style={styles.root} testID={testID}>

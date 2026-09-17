@@ -4,6 +4,23 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!--
+          Without this the window behind React is the platform default (white),
+          which flashes through on every native stack push and on overscroll —
+          the one place dark mode visibly breaks even though every React view is
+          themed correctly. `@color/app_canvas` has a values-night counterpart.
+        -->
+        <item name="android:windowBackground">@color/app_canvas</item>
+    </style>
+
+    <!--
+      The theme the activity LAUNCHES with, so the brand splash is the first
+      thing drawn. MainActivity swaps back to AppTheme in onCreate — without
+      that swap the splash drawable stays behind every screen for the life of
+      the activity, which shows through anywhere the UI is transparent.
+    -->
+    <style name="BootTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_background</item>
     </style>
 
 </resources>

@@ -48,6 +48,17 @@ export const getFirestoreClient = (): Firestore => {
 export const documentIdPath = (): FirebaseFirestoreTypes.FieldPath =>
   firestore.FieldPath.documentId();
 
+/**
+ * A server-side atomic increment.
+ *
+ * `FieldValue.increment` matters more than it looks: two devices copying the
+ * same prompt at the same moment both send "+1" rather than both writing the
+ * same read-then-add value, so neither loses. Exposed here because this file is
+ * the only one allowed to import a Firebase SDK.
+ */
+export const incrementBy = (amount: number): FirebaseFirestoreTypes.FieldValue =>
+  firestore.FieldValue.increment(amount);
+
 /** Collection paths in one place, so a typo is a compile error, not an empty list. */
 export const collections = {
   prompts: 'prompts',

@@ -1,18 +1,31 @@
 import { Platform, type TextStyle } from 'react-native';
 
+import { type Responsive } from './responsive';
+
 /**
- * System fonts in Phase 1 — shipping a custom face means asset linking on both
- * platforms, which belongs in its own change, not in the foundation.
+ * The ceiling on the OS text-size setting ("Text Size" on iOS, "Font size" on
+ * Android).
+ *
+ * A SECOND scaling axis, independent of the window, that `Dimensions` never
+ * reports — which is why a screen looks right in a simulator and wrong on a
+ * phone whose owner raised it. The OS multiplies every `fontSize` at render and
+ * leaves the layout boxes untouched, so text overflows the controls sized
+ * around it. It is a CEILING, not a multiplier: the applied scale is
+ * `min(osSetting, ceiling)`, and it belongs on every component that renders
+ * text directly — `Text` and the one `TextInput`.
+ */
+export const MAX_FONT_SCALE = 1.4;
+
+/**
+ * System fonts — shipping a custom face means asset linking on both platforms,
+ * which belongs in its own change rather than in the foundation.
  */
 const fontFamily = Platform.select({
-  ios: { regular: 'System', medium: 'System', semibold: 'System', bold: 'System' },
-  default: {
-    regular: 'sans-serif',
-    medium: 'sans-serif-medium',
-    semibold: 'sans-serif-medium',
-    bold: 'sans-serif',
-  },
+  ios: 'System',
+  default: 'sans-serif',
 });
+
+const monoFamily = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 export const fontWeights = {
   regular: '400',
@@ -35,46 +48,100 @@ export type TextVariant =
   | 'label'
   | 'mono';
 
-type VariantSpec = {
-  readonly fontSize: number;
-  readonly lineHeight: number;
-  readonly letterSpacing: number;
-  readonly fontWeight: FontWeightToken;
-};
+export type Typography = Record<TextVariant, TextStyle>;
 
-const baseVariants: Record<TextVariant, VariantSpec> = {
-  display: { fontSize: 34, lineHeight: 40, letterSpacing: -0.6, fontWeight: 'bold' },
-  h1: { fontSize: 28, lineHeight: 34, letterSpacing: -0.4, fontWeight: 'bold' },
-  h2: { fontSize: 22, lineHeight: 28, letterSpacing: -0.3, fontWeight: 'semibold' },
-  h3: { fontSize: 18, lineHeight: 24, letterSpacing: -0.2, fontWeight: 'semibold' },
-  title: { fontSize: 16, lineHeight: 22, letterSpacing: -0.1, fontWeight: 'semibold' },
-  body: { fontSize: 15, lineHeight: 22, letterSpacing: 0, fontWeight: 'regular' },
-  bodyStrong: { fontSize: 15, lineHeight: 22, letterSpacing: 0, fontWeight: 'medium' },
-  caption: { fontSize: 13, lineHeight: 18, letterSpacing: 0, fontWeight: 'regular' },
-  label: { fontSize: 12, lineHeight: 16, letterSpacing: 0.2, fontWeight: 'medium' },
-  mono: { fontSize: 14, lineHeight: 21, letterSpacing: 0, fontWeight: 'regular' },
-};
-
-export type TypographyStyle = Pick<
-  TextStyle,
-  'fontSize' | 'lineHeight' | 'letterSpacing' | 'fontWeight' | 'fontFamily'
->;
-export type Typography = Record<TextVariant, TypographyStyle>;
-
-export const createTypography = (scale: number): Typography => {
-  const out = {} as Record<TextVariant, TypographyStyle>;
-  for (const key of Object.keys(baseVariants) as TextVariant[]) {
-    const spec = baseVariants[key];
-    out[key] = {
-      fontSize: Math.round(spec.fontSize * scale),
-      lineHeight: Math.round(spec.lineHeight * scale),
-      letterSpacing: spec.letterSpacing,
-      fontWeight: fontWeights[spec.fontWeight],
-      fontFamily:
-        key === 'mono'
-          ? Platform.select({ ios: 'Menlo', default: 'monospace' })
-          : fontFamily?.regular,
-    };
-  }
-  return out;
-};
+/**
+ * The type ramp, on the package's own maps.
+ *
+ * Size comes from `FONTSIZE` and leading from `VScale`, which is the pairing
+ * the doctor app's sheets use — the two axes scale from different sides of the
+ * window, so a headline's leading tracks the height it has to fill rather than
+ * the width.
+ *
+ * Every index was chosen so the rendered value at the 390x844 design window
+ * equals the dp the design was drawn at: `size_17` is the 15dp body, `size_14`
+ * the 12dp label. The index is not the dp — `FONTSIZE.size_N` is
+ * `shortSide * N/440` — so reading one of these as a point size is the one
+ * mistake to avoid here.
+ */
+export const buildType = ({ FONTSIZE, VScale }: Responsive): Typography => ({
+  // 34dp / 40dp
+  display: {
+    fontSize: FONTSIZE.size_38,
+    lineHeight: VScale.Height_47,
+    letterSpacing: -0.6,
+    fontWeight: fontWeights.bold,
+    fontFamily,
+  },
+  // 28dp / 34dp
+  h1: {
+    fontSize: FONTSIZE.size_32,
+    lineHeight: VScale.Height_40,
+    letterSpacing: -0.4,
+    fontWeight: fontWeights.bold,
+    fontFamily,
+  },
+  // 22dp / 28dp
+  h2: {
+    fontSize: FONTSIZE.size_25,
+    lineHeight: VScale.Height_33,
+    letterSpacing: -0.3,
+    fontWeight: fontWeights.semibold,
+    fontFamily,
+  },
+  // 18dp / 24dp
+  h3: {
+    fontSize: FONTSIZE.size_20,
+    lineHeight: VScale.Height_28,
+    letterSpacing: -0.2,
+    fontWeight: fontWeights.semibold,
+    fontFamily,
+  },
+  // 16dp / 22dp
+  title: {
+    fontSize: FONTSIZE.size_18,
+    lineHeight: VScale.Height_26,
+    letterSpacing: -0.1,
+    fontWeight: fontWeights.semibold,
+    fontFamily,
+  },
+  // 15dp / 22dp
+  body: {
+    fontSize: FONTSIZE.size_17,
+    lineHeight: VScale.Height_26,
+    letterSpacing: 0,
+    fontWeight: fontWeights.regular,
+    fontFamily,
+  },
+  bodyStrong: {
+    fontSize: FONTSIZE.size_17,
+    lineHeight: VScale.Height_26,
+    letterSpacing: 0,
+    fontWeight: fontWeights.medium,
+    fontFamily,
+  },
+  // 13dp / 18dp
+  caption: {
+    fontSize: FONTSIZE.size_15,
+    lineHeight: VScale.Height_21,
+    letterSpacing: 0,
+    fontWeight: fontWeights.regular,
+    fontFamily,
+  },
+  // 12dp / 16dp
+  label: {
+    fontSize: FONTSIZE.size_14,
+    lineHeight: VScale.Height_19,
+    letterSpacing: 0.2,
+    fontWeight: fontWeights.medium,
+    fontFamily,
+  },
+  // Prompt text, read in long runs. 14dp / 21dp.
+  mono: {
+    fontSize: FONTSIZE.size_16,
+    lineHeight: VScale.Height_25,
+    letterSpacing: 0,
+    fontWeight: fontWeights.regular,
+    fontFamily: monoFamily,
+  },
+});

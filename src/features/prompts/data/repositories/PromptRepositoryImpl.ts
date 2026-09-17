@@ -4,6 +4,7 @@ import { type CategoryId, type PromptId } from '@core/types/branded';
 import { type PromptDetail } from '../../domain/entities/Prompt';
 import {
   type GetPromptsParams,
+  type PromptCounter,
   type PromptPage,
   type PromptRepository,
   type SearchPromptsParams,
@@ -64,6 +65,14 @@ export class PromptRepositoryImpl implements PromptRepository {
         searchToken: params.query,
       });
       return this.toPage(raw);
+    } catch (error) {
+      throw toFirestoreAppError(error);
+    }
+  }
+
+  async incrementStat(id: PromptId, counter: PromptCounter, amount: number): Promise<void> {
+    try {
+      await this.dataSource.incrementStat(id, counter, amount);
     } catch (error) {
       throw toFirestoreAppError(error);
     }

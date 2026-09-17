@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { type CategoryId, type PromptId } from '@core/types/branded';
+import { env } from '@core/config/env';
+import { type CategoryId, type PromptId, promptId as toPromptId } from '@core/types/branded';
 import { container } from '@app/di/container';
 import { getPromptById } from '../../domain/usecases/getPromptById';
 import { getPrompts } from '../../domain/usecases/getPrompts';
 import { getPromptsByCategory } from '../../domain/usecases/getPromptsByCategory';
-import { type PromptListItem } from '../../domain/entities/Prompt';
+import { searchPrompts } from '../../domain/usecases/searchPrompts';
+import { type PromptDetail, type PromptListItem } from '../../domain/entities/Prompt';
 import { type PromptPage, type PromptSort } from '../../domain/repositories/PromptRepository';
 import { findCachedPrompt } from './promptPlaceholder';
 import { promptKeys } from './queryKeys';
@@ -17,13 +19,27 @@ const repo = () => container().promptRepository;
 const useFlatItems = (pages: readonly PromptPage[] | undefined): readonly PromptListItem[] =>
   useMemo(() => (pages ? pages.flatMap(page => [...page.items]) : []), [pages]);
 
+/** A stable empty default, so an omitted exclusion list is not a new array
+ * identity on every render (which would re-run the memos below each time). */
+const EMPTY_IDS: readonly string[] = [];
+
 export type FeedFilter = {
   readonly sort: PromptSort;
   readonly categoryId?: CategoryId | null;
 };
 
-/** A section preview shows nine prompts and a "Show all" cell as the tenth. */
+/** How many prompts a section preview shows. */
 export const SECTION_SIZE = 9;
+
+/**
+ * Headroom over `SECTION_SIZE` when fetching.
+ *
+ * A section drops the prompt being viewed AND anything a higher-ranked section
+ * already claimed (see `useSuggestionLedger`). Fetching only one spare would
+ * leave the lowest strip visibly short whenever the sorts agree with each
+ * other — which, for popular prompts, is most of the time.
+ */
+const SECTION_OVERFETCH = SECTION_SIZE + 1;
 
 /**
  * The endless prompt feed: one sort, optionally narrowed to one category.
@@ -61,16 +77,24 @@ export const useLatestPrompts = () => usePromptFeed({ sort: 'newest' });
  * already looking at still leaves a full row — a section that silently shrinks
  * to eight on some prompts and not others looks broken.
  */
-export const useSectionPrompts = (sort: PromptSort, excludeId?: string) => {
+export const useSectionPrompts = (
+  sort: PromptSort,
+  excludeId?: string,
+  /** Ids claimed by higher-ranked sections — see `useSuggestionLedger`. */
+  excludeIds: readonly string[] = EMPTY_IDS,
+) => {
   const query = useQuery({
     queryKey: promptKeys.section(sort),
-    queryFn: () => getPrompts(repo())({ sort, limit: SECTION_SIZE + 1 }),
+    queryFn: () => getPrompts(repo())({ sort, limit: SECTION_SIZE + SECTION_OVERFETCH }),
   });
 
   const items = useMemo(() => {
     const all = query.data?.items ?? [];
-    return all.filter(item => item.id !== excludeId).slice(0, SECTION_SIZE);
-  }, [query.data?.items, excludeId]);
+    const taken = new Set(excludeIds);
+    return all
+      .filter(item => item.id !== excludeId && !taken.has(item.id))
+      .slice(0, SECTION_SIZE);
+  }, [query.data?.items, excludeId, excludeIds]);
 
   return { ...query, items };
 };
@@ -86,17 +110,27 @@ export const useSectionPrompts = (sort: PromptSort, excludeId?: string) => {
  * Fetches one more than it shows, so removing the prompt the user is already
  * looking at still leaves a full row.
  */
-export const useRelatedPrompts = (categoryId: CategoryId, excludeId: string) => {
+export const useRelatedPrompts = (
+  categoryId: CategoryId,
+  excludeId: string,
+  excludeIds: readonly string[] = EMPTY_IDS,
+) => {
   const query = useQuery({
     queryKey: promptKeys.related(categoryId),
     queryFn: () =>
-      getPromptsByCategory(repo())(categoryId, { limit: SECTION_SIZE + 1, cursor: null }),
+      getPromptsByCategory(repo())(categoryId, {
+        limit: SECTION_SIZE + SECTION_OVERFETCH,
+        cursor: null,
+      }),
   });
 
   const items = useMemo(() => {
     const all = query.data?.items ?? [];
-    return all.filter(item => item.id !== excludeId).slice(0, SECTION_SIZE);
-  }, [query.data?.items, excludeId]);
+    const taken = new Set(excludeIds);
+    return all
+      .filter(item => item.id !== excludeId && !taken.has(item.id))
+      .slice(0, SECTION_SIZE);
+  }, [query.data?.items, excludeId, excludeIds]);
 
   return { ...query, items };
 };
@@ -125,4 +159,87 @@ export const usePromptById = (id: PromptId) => {
     queryFn: () => getPromptById(repo())(id),
     placeholderData,
   });
+};
+
+/**
+ * Collapses N independent detail queries into one feed-shaped result.
+ *
+ * Module scope because TanStack re-runs `combine` whenever its identity
+ * changes, and an inline arrow is a new identity on every render.
+ */
+const combineDetails = (
+  results: ReadonlyArray<{
+    data: PromptDetail | undefined;
+    isPending: boolean;
+    isError: boolean;
+  }>,
+): { items: readonly PromptDetail[]; isPending: boolean; isError: boolean } => ({
+  items: results.flatMap(result => (result.data === undefined ? [] : [result.data])),
+  // Pending only while NOTHING is showable — one slow prompt should not hide
+  // the nine that already resolved.
+  isPending: results.length > 0 && results.every(result => result.isPending),
+  isError: results.length > 0 && results.every(result => result.isError),
+});
+
+/**
+ * Several prompts by id, for a list the server cannot produce — favourites are
+ * device-local, so there is no query that returns "the ones this user saved".
+ *
+ * Deliberately built on `promptKeys.detail`, the SAME key the detail screen
+ * uses. Favouriting something you just looked at therefore costs zero extra
+ * reads, and opening it afterwards is instant.
+ */
+export const usePromptsByIds = (ids: readonly string[]) => {
+  const client = useQueryClient();
+
+  const queries = useMemo(
+    () =>
+      ids.map(id => ({
+        queryKey: promptKeys.detail(id),
+        queryFn: () => getPromptById(repo())(toPromptId(id)),
+        placeholderData: findCachedPrompt(client, id),
+      })),
+    [ids, client],
+  );
+
+  return useQueries({ queries, combine: combineDetails });
+};
+
+/**
+ * Search results for a query, paginated.
+ *
+ * `enabled` is what keeps this from costing anything while the field is empty
+ * or too short: the use case already refuses to run below the minimum length,
+ * but an enabled query would still occupy a loading state and make the screen
+ * flash a spinner between keystrokes.
+ */
+export const useSearchResults = (query: string) => {
+  const trimmed = query.trim();
+  const enabled = trimmed.length >= env.SEARCH_MIN_QUERY_LENGTH;
+
+  const result = useInfiniteQuery({
+    queryKey: promptKeys.search(trimmed),
+    queryFn: ({ pageParam }) =>
+      searchPrompts(repo())({ query: trimmed, cursor: pageParam as string | null }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: PromptPage) => last.nextCursor,
+    enabled,
+    // Results for a query the user has moved on from are not worth keeping
+    // warm; the next search is almost never the previous one.
+    staleTime: 30_000,
+  });
+
+  const items = useFlatItems(result.data?.pages);
+
+  return {
+    items,
+    enabled,
+    isPending: enabled && result.isPending,
+    isError: result.isError,
+    error: result.error,
+    hasNextPage: result.hasNextPage,
+    isFetchingNextPage: result.isFetchingNextPage,
+    fetchNextPage: result.fetchNextPage,
+    refetch: result.refetch,
+  };
 };

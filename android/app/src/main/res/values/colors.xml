@@ -1,0 +1,15 @@
+<resources>
+    <!--
+      The window behind React, for the moments React is not drawing one.
+
+      This is not decoration. Until JavaScript mounts, and during every native
+      stack transition, overscroll and rotation, what shows through is the
+      window background — and with no value set it falls back to the platform
+      default, which is white. In dark mode that is a white flash on every push.
+
+      The value must track `bg.canvas` in src/design-system/theme/colors.ts.
+      There is a `values-night` copy beside this one, so the window follows the
+      system exactly as `Theme.AppCompat.DayNight` does.
+    -->
+    <color name="app_canvas">#F7F7FA</color>
+</resources>

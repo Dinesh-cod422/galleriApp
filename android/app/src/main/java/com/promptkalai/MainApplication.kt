@@ -1,4 +1,4 @@
-package com.aipromptgallery
+package com.promptkalai
 
 import android.app.Application
 import com.facebook.react.PackageList

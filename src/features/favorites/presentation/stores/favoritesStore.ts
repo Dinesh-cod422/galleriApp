@@ -73,3 +73,13 @@ export const useToggleFavorite = (): FavoritesState['toggle'] =>
   useFavoritesStore(state => state.toggle);
 
 export const useFavoriteCount = (): number => useFavoritesStore(state => state.ids.size);
+
+/**
+ * The whole set, for the one screen that lists them.
+ *
+ * Returns the STORED set, never a copy: `toggle` replaces the set wholesale, so
+ * this reference is stable between toggles and the Favourites grid does not
+ * re-render on unrelated state changes.
+ */
+export const useFavoriteIds = (): ReadonlySet<string> =>
+  useFavoritesStore(state => state.ids);

@@ -1,13 +1,12 @@
 import React, { memo, useCallback, useState } from 'react';
-import {
+import { StyleSheet,
   ScrollView,
-  useWindowDimensions,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { AppImage, Text, type Theme, useThemedStyles } from '@ds';
+import { AppImage, Text, type AppTheme, useResponsive, createStyles, type Responsive } from '@ds';
 
 import { type PromptImage } from '../../domain/entities/Prompt';
 
@@ -16,39 +15,49 @@ export type PromptImagePagerProps = {
   readonly title: string;
 };
 
-const styleFactory = (theme: Theme) => ({
-  dots: {
-    position: 'absolute' as const,
-    bottom: theme.spacing.sm,
-    alignSelf: 'center' as const,
-    flexDirection: 'row' as const,
-    gap: theme.spacing.xs,
-    // The scrim is dark and onAccent is white in BOTH themes, so this pill
-    // stays legible over any image without a theme-specific branch.
-    backgroundColor: theme.colors.bg.scrim,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radius.pill,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.text.onAccent,
-    opacity: 0.45,
-  },
-  dotActive: { opacity: 1 },
-  counter: {
-    position: 'absolute' as const,
-    top: theme.spacing.base,
-    right: theme.spacing.base,
-    backgroundColor: theme.colors.bg.scrim,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xxs,
-    borderRadius: theme.radius.pill,
-  },
-  counterText: { color: theme.colors.text.onAccent },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { HScale, VScale } = responsive;
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      dots: {
+        position: 'absolute' as const,
+        bottom: HScale.Width_9,
+        alignSelf: 'center' as const,
+        flexDirection: 'row' as const,
+        gap: HScale.Width_5,
+        // The scrim is dark and onAccent is white in BOTH themes, so this pill
+        // stays legible over any image without a theme-specific branch.
+        backgroundColor: p.bg.scrim,
+        paddingHorizontal: HScale.Width_9,
+        paddingVertical: VScale.Height_5,
+        borderRadius: 999,
+      },
+      dot: {
+        width: HScale.Width_7,
+        height: HScale.Width_7,
+        borderRadius: HScale.Width_7 / 2,
+        backgroundColor: p.text.onAccent,
+        opacity: 0.45,
+      },
+      dotActive: { opacity: 1 },
+      counter: {
+        position: 'absolute' as const,
+        top: HScale.Width_18,
+        right: HScale.Width_18,
+        backgroundColor: p.bg.scrim,
+        paddingHorizontal: HScale.Width_9,
+        paddingVertical: VScale.Height_2,
+        borderRadius: 999,
+      },
+      counterText: { color: p.text.onAccent },
+    }),
+    palette: p,
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 /**
  * The hero image, or a swipeable strip when a prompt has more than one —
@@ -59,8 +68,10 @@ const styleFactory = (theme: Theme) => ({
  * up and down under the user's thumb.
  */
 export const PromptImagePager = memo<PromptImagePagerProps>(({ images, title }) => {
-  const styles = useThemedStyles(styleFactory);
-  const { width } = useWindowDimensions();
+  const styles = useStyles();
+  // The page width IS the window width, read through the package so it stays
+  // right after a rotation or a split-screen resize.
+  const { width } = useResponsive();
   const [index, setIndex] = useState(0);
 
   const onScroll = useCallback(

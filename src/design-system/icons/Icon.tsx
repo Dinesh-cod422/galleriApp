@@ -2,7 +2,9 @@ import React, { memo } from 'react';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 import { type ColorTokens } from '../theme/colors';
-import { useTheme } from '../theme/ThemeProvider';
+import { createStyles } from '../theme/createStyles';
+import { type Responsive } from '../theme/responsive';
+import { type AppTheme } from '../theme/theme';
 
 /**
  * One Icon component with a path registry, rather than ~16 separate icon
@@ -27,14 +29,21 @@ export type IconName =
   | 'check'
   | 'sparkles'
   | 'trending'
-  | 'grid';
+  | 'grid'
+  | 'flame'
+  | 'sliders'
+  | 'users'
+  | 'userFilled'
+  | 'usersFilled';
 
 type IconColorToken = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'favorite';
 
 const resolveColor = (colors: ColorTokens, token: IconColorToken): string => {
   switch (token) {
     case 'accent':
-      return colors.accent.default;
+      // The ink, not the fill — an icon tinted `accent` is drawn ON a
+      // surface. A glyph sitting on the accent fill takes `onAccent`.
+      return colors.accent.ink;
     case 'onAccent':
       return colors.text.onAccent;
     case 'favorite':
@@ -149,30 +158,99 @@ const REGISTRY: Record<IconName, (props: PathProps) => React.JSX.Element> = {
       <Rect x={3} y={14} width={7} height={7} rx={1.5} {...p} />
     </>
   ),
+  // The "Trending" tag's mark. `trending` above is the analytics arrow — this
+  // is the flame the tag actually shows.
+  flame: p => (
+    <Path
+      d="M12 2.5s4.5 3.7 4.5 8a4.5 4.5 0 1 1-9 0c0-1.6.7-2.9 1.6-3.9.2 1.3.9 2.2 1.8 2.2 1 0 1.6-1 1.4-2.4-.2-1.5-.3-2.8-.3-3.9z"
+      {...p}
+    />
+  ),
+  // Filter control in the header — three tracks with offset handles.
+  sliders: p => (
+    <>
+      <Line x1={4} y1={7} x2={20} y2={7} {...p} />
+      <Line x1={4} y1={12} x2={20} y2={12} {...p} />
+      <Line x1={4} y1={17} x2={20} y2={17} {...p} />
+      <Circle cx={9} cy={7} r={2.2} {...p} />
+      <Circle cx={15} cy={12} r={2.2} {...p} />
+      <Circle cx={8} cy={17} r={2.2} {...p} />
+    </>
+  ),
+  users: p => (
+    <>
+      <Path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" {...p} />
+      <Circle cx={9} cy={7} r={3.2} {...p} />
+      <Path d="M22 20v-1.5a4 4 0 0 0-3-3.87" {...p} />
+      <Path d="M16 4.13a4 4 0 0 1 0 5.74" {...p} />
+    </>
+  ),
+  // Solid variants: the category chips read as small colour marks rather than
+  // line drawings at 16dp, where a 1.8dp stroke is most of the glyph.
+  userFilled: p => (
+    <>
+      <Circle cx={12} cy={7.5} r={3.8} fill={p.stroke} stroke="none" />
+      <Path
+        d="M4.5 20a7.5 7.5 0 0 1 15 0z"
+        fill={p.stroke}
+        stroke="none"
+      />
+    </>
+  ),
+  usersFilled: p => (
+    <>
+      <Circle cx={9} cy={7.5} r={3.4} fill={p.stroke} stroke="none" />
+      <Path d="M2.5 19.5a6.5 6.5 0 0 1 13 0z" fill={p.stroke} stroke="none" />
+      <Circle cx={17.5} cy={8.5} r={2.6} fill={p.stroke} stroke="none" />
+      <Path d="M13.5 19.5a5 5 0 0 1 9 0z" fill={p.stroke} stroke="none" />
+    </>
+  ),
 };
 
 export type IconProps = {
   name: IconName;
   size?: number;
   color?: IconColorToken;
+  /**
+   * A literal colour, overriding `color`.
+   *
+   * The token ramp covers everything that means something — state, emphasis,
+   * on-accent contrast — and that is what almost every icon should use. This is
+   * for the few marks that carry IDENTITY instead: a category's colour is part
+   * of what names it, so it stays put in both themes rather than being remapped
+   * with the text ramp. Reach for a token first; if the colour would change
+   * meaning when it changes, it does not belong here.
+   */
+  tint?: string;
   strokeWidth?: number;
 };
 
+/** 21dp at the design window — the step that sits beside body text. */
+const getStyles = (appTheme: AppTheme, { IconSize }: Responsive) => ({
+  iconSizes: { default: IconSize.iconSize_24 },
+  palette: appTheme.colors,
+});
+const useStyles = createStyles(getStyles);
+
 const IconComponent = ({
   name,
-  size = 22,
+  size,
   color = 'primary',
+  tint,
   strokeWidth = 1.8,
 }: IconProps): React.JSX.Element => {
-  const theme = useTheme();
-  const stroke = resolveColor(theme.colors, color);
+  const styles = useStyles();
+  const stroke = tint ?? resolveColor(styles.palette, color);
+  // The ramp's default step, not a literal: an icon with no size given sits
+  // beside body text, and `lg` is the size paired with it.
+  const dimension = size ?? styles.iconSizes.default;
 
   // strokeLinecap/Join are set on the root and inherited by every child
   // path, instead of repeating them on ~40 elements.
   return (
     <Svg
-      width={size}
-      height={size}
+      width={dimension}
+      height={dimension}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"

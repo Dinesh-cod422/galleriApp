@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>412706684654-3hlk9lb4q9696t4spc2r88c78qags5ae.apps.googleusercontent.com</string>
+	<string>412706684654-c5gjdtunvrmjkf641m9tc173usnd37nt.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.412706684654-3hlk9lb4q9696t4spc2r88c78qags5ae</string>
+	<string>com.googleusercontent.apps.412706684654-c5gjdtunvrmjkf641m9tc173usnd37nt</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>412706684654-pmg6b349h13mjoh99rgtjg15130oqivd.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.aipromptgallery</string>
+	<string>com.promptkalai</string>
 	<key>PROJECT_ID</key>
 	<string>notesapp-ed63a</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:412706684654:ios:3cfd3af365b50b31933dff</string>
+	<string>1:412706684654:ios:46a72f8933f51848933dff</string>
 </dict>
 </plist>

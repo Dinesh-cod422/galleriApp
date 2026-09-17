@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The window background Android paints before any JavaScript runs.
+
+  Without this the app opened on a bare white (or black) window, which is the
+  flash this removes. It is a still frame of AnimatedSplash's first frame: the
+  same three brand stops on the same diagonal, and the mark at the same 240dp.
+
+  A <shape> gradient rather than a bitmap because Android's gradient takes
+  exactly start/center/end — which is precisely the three stops the mark's
+  gradient has, so no image is needed for the background at all.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item>
+    <shape android:shape="rectangle">
+      <!-- 315° = top-left to bottom-right, matching the icon and the React splash. -->
+      <gradient
+        android:angle="315"
+        android:startColor="#A68AF9"
+        android:centerColor="#8039E9"
+        android:endColor="#DA2778"
+        android:type="linear" />
+    </shape>
+  </item>
+  <item
+    android:width="240dp"
+    android:height="240dp"
+    android:gravity="center"
+    android:drawable="@drawable/splash_mark" />
+</layer-list>

@@ -1,29 +1,42 @@
 import React, { memo } from 'react';
-import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { usePressScale } from '../../animation/usePressScale';
-import { type Theme } from '../../theme/theme';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
+import { layoutOf } from '../../theme/layout';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type IconButtonVariant = 'plain' | 'surface' | 'overlay';
 
-const styleFactory = (theme: Theme) => ({
-  base: {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    minWidth: theme.layout.minTouchTarget,
-    minHeight: theme.layout.minTouchTarget,
-    borderRadius: theme.radius.pill,
-  },
-  plain: { backgroundColor: 'transparent' },
-  surface: { backgroundColor: theme.colors.bg.subtle },
-  /** For icons sitting on top of imagery — needs its own contrast. */
-  overlay: { backgroundColor: theme.colors.bg.scrim },
-  disabled: { opacity: 0.4 },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const layout = layoutOf(responsive);
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      base: {
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        minWidth: layout.minTouchTarget,
+        minHeight: layout.minTouchTarget,
+        borderRadius: 999,
+      },
+      plain: { backgroundColor: 'transparent' },
+      surface: { backgroundColor: p.bg.subtle },
+      /** For icons sitting on top of imagery — needs its own contrast. */
+      overlay: { backgroundColor: p.bg.scrim },
+      disabled: { opacity: 0.4 },
+    }),
+    palette: p,
+    layout,
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type IconButtonProps = {
   /** The icon element. IconButton never picks the icon itself. */
@@ -46,7 +59,7 @@ const IconButtonComponent = ({
   testID,
   style,
 }: IconButtonProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
+  const styles = useStyles();
   const { animatedStyle, onPressIn, onPressOut } = usePressScale(0.88, 1);
 
   return (
@@ -60,7 +73,7 @@ const IconButtonComponent = ({
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       // Expands the touch target without inflating the visual size.
-      hitSlop={8}
+      hitSlop={styles.layout.hitSlop}
       style={[styles.base, styles[variant], disabled && styles.disabled, animatedStyle, style]}>
       {children}
     </AnimatedPressable>

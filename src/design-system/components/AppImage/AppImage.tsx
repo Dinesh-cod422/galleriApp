@@ -1,10 +1,10 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import FastImage, { type ResizeMode } from '@d11/react-native-fast-image';
 
-import { type Theme } from '../../theme/theme';
-import { useTheme } from '../../theme/ThemeProvider';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 import { Skeleton } from '../Skeleton/Skeleton';
 
 /**
@@ -60,28 +60,39 @@ export type AppImageProps = {
   placeholderUri?: string;
 };
 
-const styleFactory = (theme: Theme) => ({
-  container: {
-    overflow: 'hidden' as const,
-    backgroundColor: theme.colors.bg.imagePlaceholder,
-  },
-  image: {
-    width: '100%' as const,
-    height: '100%' as const,
-  },
-  /**
-   * BEHIND the image, never over it. A swap from a cached thumbnail to the
-   * full-resolution file must not drop a shimmer on top of a picture the user
-   * is already looking at — the old frame stays until the new one decodes.
-   */
-  skeleton: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS } = responsive;
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      container: {
+        overflow: 'hidden' as const,
+        backgroundColor: p.bg.imagePlaceholder,
+      },
+      image: {
+        width: '100%' as const,
+        height: '100%' as const,
+      },
+      /**
+       * BEHIND the image, never over it. A swap from a cached thumbnail to the
+       * full-resolution file must not drop a shimmer on top of a picture the user
+       * is already looking at — the old frame stays until the new one decodes.
+       */
+      skeleton: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      },
+    }),
+    palette: p,
+    radii: { md: BORDER_RADIUS.radius_26 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 const AppImageComponent = ({
   uri,
@@ -96,8 +107,7 @@ const AppImageComponent = ({
   showSkeleton = true,
   placeholderUri,
 }: AppImageProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
+  const styles = useStyles();
   const [settled, setSettled] = useState(false);
 
   // A NEW source is unresolved again — but only a different uri counts. Any
@@ -133,7 +143,7 @@ const AppImageComponent = ({
       testID={testID}
       style={[
         styles.container,
-        { borderRadius: borderRadius ?? theme.radius.md },
+        { borderRadius: borderRadius ?? styles.radii.md },
         aspectRatio != null && { aspectRatio },
         style,
       ]}>
@@ -142,7 +152,7 @@ const AppImageComponent = ({
           testID={testID === undefined ? undefined : `${testID}-skeleton`}
           style={styles.skeleton}
           height="100%"
-          borderRadius={borderRadius ?? theme.radius.md}
+          borderRadius={borderRadius ?? styles.radii.md}
         />
       )}
       {/* Dropped once the real file has painted — holding a second decoded

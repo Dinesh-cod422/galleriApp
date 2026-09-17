@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { AppImage, Badge, type Theme, usePressScale, useTheme, useThemedStyles } from '@ds';
+import { AppImage, Badge, type BadgeTone, type IconName, type AppTheme, usePressScale, createStyles, type Responsive } from '@ds';
 // Cross-feature, and deliberately so: the tile composes a favourites control
 // rather than reimplementing one. The dependency is presentation-to-
 // presentation — no data layer is crossed — and it points at the feature that
@@ -28,18 +28,40 @@ const MAX_ASPECT = 2;
 const clampAspect = (ratio: number): number =>
   Number.isFinite(ratio) && ratio > 0 ? Math.min(Math.max(ratio, MIN_ASPECT), MAX_ASPECT) : 1;
 
-const styleFactory = (theme: Theme) => ({
-  badge: {
-    position: 'absolute' as const,
-    top: theme.spacing.sm,
-    left: theme.spacing.sm,
-  },
-  favorite: {
-    position: 'absolute' as const,
-    bottom: theme.spacing.xxs,
-    right: theme.spacing.xxs,
-  },
-});
+/**
+ * The mark each status tag wears. Kept beside the tile rather than in the
+ * mapper: which glyph reads as "trending" is a presentation decision, and the
+ * mapper's job is to say WHICH tag applies, not how it is drawn.
+ */
+const BADGE_ICONS: Partial<Record<BadgeTone, IconName>> = {
+  trending: 'flame',
+  fresh: 'sparkles',
+  featured: 'sparkles',
+};
+
+const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS, HScale } = responsive;
+
+  return {
+    ...StyleSheet.create({
+      badge: {
+        position: 'absolute' as const,
+        top: HScale.Width_14,
+        left: HScale.Width_14,
+      },
+      // Opposite corner from the tag, so neither ever covers the other however
+      // long the label runs.
+      favorite: {
+        position: 'absolute' as const,
+        top: HScale.Width_9,
+        right: HScale.Width_9,
+      },
+    }),
+    radii: { xl: BORDER_RADIUS.radius_56 },
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type PromptTileProps = {
   vm: PromptCardVm;
@@ -80,8 +102,7 @@ const PromptTileComponent = ({
   aspectRatio,
   style,
 }: PromptTileProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
+  const styles = useStyles();
   const { animatedStyle, onPressIn, onPressOut } = usePressScale(0.97);
 
   return (
@@ -102,13 +123,17 @@ const PromptTileComponent = ({
         uri={vm.thumbnailUrl}
         aspectRatio={clampAspect(aspectRatio ?? vm.aspectRatio)}
         priority="normal"
-        borderRadius={theme.radius.lg}
+        borderRadius={styles.radii.xl}
         testID={`prompt-tile-image-${vm.id}`}
       />
 
       {vm.badge !== null && (
         <View style={styles.badge}>
-          <Badge label={vm.badge.label} tone={vm.badge.tone} />
+          <Badge
+            label={vm.badge.label}
+            tone={vm.badge.tone}
+            icon={BADGE_ICONS[vm.badge.tone]}
+          />
         </View>
       )}
 

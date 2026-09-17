@@ -75,7 +75,21 @@ module.exports = {
   default: Animated,
   ...Animated,
 
-  useSharedValue: (initial) => ({ value: initial }),
+  /*
+   * Stable across renders, as the real hook is.
+   *
+   * Returning a fresh `{ value }` each render made every shared value read back
+   * as its initial value forever: a component that writes one in an effect and
+   * reads it in `useAnimatedStyle` on a later render saw the write vanish, so
+   * no animated placement could be asserted at all.
+   */
+  useSharedValue: (initial) => {
+    const ref = React.useRef(null);
+    if (ref.current === null) {
+      ref.current = { value: initial };
+    }
+    return ref.current;
+  },
   useAnimatedStyle: (factory) => factory(),
   useDerivedValue: (factory) => ({ value: factory() }),
   useAnimatedRef: () => ({ current: null }),

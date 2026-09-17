@@ -67,7 +67,6 @@ describe('toPromptCardVm', () => {
   it('formats counts and dates once, off the render path', () => {
     const vm = toPromptCardVm(item({ createdAt: daysAgo(1) }), NOW);
 
-    expect(vm.likesLabel).toBe('1.2K');
     expect(vm.viewsLabel).toBe('18K');
     expect(vm.dateLabel).toBeTruthy();
     expect(vm.badge).toEqual({ label: 'New', tone: 'fresh' });

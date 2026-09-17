@@ -1,20 +1,31 @@
 import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { type ShadowToken } from '../../theme/shadows';
-import { type Theme } from '../../theme/theme';
-import { useTheme } from '../../theme/ThemeProvider';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 
-const styleFactory = (theme: Theme) => ({
-  root: {
-    backgroundColor: theme.colors.bg.surface,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border.subtle,
-    overflow: 'hidden' as const,
-  },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS } = responsive;
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      root: {
+        backgroundColor: p.bg.surface,
+        borderRadius: BORDER_RADIUS.radius_41,
+        borderWidth: 1,
+        borderColor: p.border.subtle,
+        overflow: 'hidden' as const,
+      },
+    }),
+    palette: p,
+    shadows: appTheme.shadows,
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 export type CardProps = {
   children: React.ReactNode;
@@ -28,8 +39,7 @@ export type CardProps = {
  * not need. Composition instead — wrap a Card in a Pressable when you need one.
  */
 export const Card = ({ children, elevation = 'sm', style }: CardProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
+  const styles = useStyles();
 
-  return <View style={[styles.root, theme.shadows[elevation], style]}>{children}</View>;
+  return <View style={[styles.root, styles.shadows[elevation], style]}>{children}</View>;
 };

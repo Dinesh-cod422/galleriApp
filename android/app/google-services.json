@@ -84,6 +84,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412706684654:android:1b276652e4055587933dff",
+        "android_client_info": {
+          "package_name": "com.promptkalai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhIk6EMRQ7MJ7pD8xlDnMVq2-uR-YT64I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "412706684654-p4rkgb2ret7jhflh2o1hjc7st2q0end7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "412706684654-3hlk9lb4q9696t4spc2r88c78qags5ae.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aipromptgallery"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

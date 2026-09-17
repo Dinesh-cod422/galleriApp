@@ -1,62 +1,75 @@
 import React, { memo } from 'react';
-import { ActivityIndicator, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, ActivityIndicator, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { usePressScale } from '../../animation/usePressScale';
-import { type Theme } from '../../theme/theme';
-import { useTheme } from '../../theme/ThemeProvider';
-import { useThemedStyles } from '../../theme/useThemedStyles';
+import { type AppTheme } from '../../theme/theme';
+import { type Responsive } from '../../theme/responsive';
+import { createStyles } from '../../theme/createStyles';
 import { Text } from '../Text/Text';
+import { layoutOf } from '../../theme/layout';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const styleFactory = (theme: Theme) => ({
-  base: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    gap: theme.spacing.sm,
-  },
-  sm: {
-    minHeight: 36,
-    paddingHorizontal: theme.spacing.md,
-  },
-  md: {
-    minHeight: theme.layout.minTouchTarget,
-    paddingHorizontal: theme.spacing.base,
-  },
-  lg: {
-    minHeight: 52,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  primary: {
-    backgroundColor: theme.colors.accent.default,
-    borderColor: theme.colors.accent.default,
-  },
-  secondary: {
-    backgroundColor: theme.colors.bg.subtle,
-    borderColor: theme.colors.border.subtle,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: theme.colors.status.danger,
-    borderColor: theme.colors.status.danger,
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-  fullWidth: {
-    alignSelf: 'stretch' as const,
-  },
-});
+const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
+  const { BORDER_RADIUS, HScale } = responsive;
+  const layout = layoutOf(responsive);
+  const p = appTheme.colors;
+
+  return {
+    ...StyleSheet.create({
+      base: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        borderRadius: BORDER_RADIUS.radius_26,
+        borderWidth: 1,
+        gap: HScale.Width_9,
+      },
+      sm: {
+        minHeight: HScale.Width_42,
+        paddingHorizontal: HScale.Width_14,
+      },
+      md: {
+        minHeight: layout.minTouchTarget,
+        paddingHorizontal: HScale.Width_18,
+      },
+      lg: {
+        minHeight: HScale.Width_60,
+        paddingHorizontal: HScale.Width_28,
+      },
+      primary: {
+        backgroundColor: p.accent.default,
+        borderColor: p.accent.default,
+      },
+      secondary: {
+        backgroundColor: p.bg.subtle,
+        borderColor: p.border.subtle,
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+      },
+      danger: {
+        // `dangerFill`, not `danger`: this paints white on it. See colors.ts.
+        backgroundColor: p.status.dangerFill,
+        borderColor: p.status.dangerFill,
+      },
+      disabled: {
+        opacity: 0.45,
+      },
+      fullWidth: {
+        alignSelf: 'stretch' as const,
+      },
+    }),
+    palette: p,
+  };
+};
+
+const useStyles = createStyles(getStyles);
 
 const LABEL_COLOR = {
   primary: 'onAccent',
@@ -93,8 +106,7 @@ const ButtonComponent = ({
   testID,
   style,
 }: ButtonProps): React.JSX.Element => {
-  const styles = useThemedStyles(styleFactory);
-  const theme = useTheme();
+  const styles = useStyles();
   const { animatedStyle, onPressIn, onPressOut } = usePressScale(0.97);
 
   const isInteractive = !disabled && !loading;
@@ -123,8 +135,8 @@ const ButtonComponent = ({
         <ActivityIndicator
           size="small"
           color={variant === 'primary' || variant === 'danger'
-            ? theme.colors.text.onAccent
-            : theme.colors.text.primary}
+            ? styles.palette.text.onAccent
+            : styles.palette.text.primary}
         />
       ) : (
         <>

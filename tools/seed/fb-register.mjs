@@ -1,8 +1,12 @@
 /**
- * Registers the AI Prompt Gallery Android + iOS apps in the Firebase project
- * and writes their native config files into the RN project.
+ * Registers the Android + iOS apps in the Firebase project and writes their
+ * native config files into the RN project.
  *
- * Additive only — never touches apps that already exist.
+ *   node fb-register.mjs --key <sa.json> --root <repo> \
+ *        --android-package com.promptkalai --ios-bundle com.promptkalai
+ *
+ * Additive only — never touches apps that already exist, so the old package's
+ * registration survives a rename and old installs keep working.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
@@ -14,9 +18,14 @@ const ROOT = value('root');
 const PROJECT = key.project_id;
 const API = `https://firebase.googleapis.com/v1beta1`;
 
-const ANDROID_PACKAGE = 'com.aipromptgallery';
-const IOS_BUNDLE = 'com.aipromptgallery';
-const DISPLAY_NAME = 'AI Prompt Gallery';
+// Overridable so a package rename does not mean editing this file. The
+// defaults are the CURRENT ids, so an argument-less run re-checks the live app
+// rather than registering something unexpected.
+const ANDROID_PACKAGE = value('android-package') ?? 'com.promptkalai';
+const IOS_BUNDLE = value('ios-bundle') ?? 'com.promptkalai';
+const DISPLAY_NAME = value('display-name') ?? 'Prompt Kalai';
+/** Where GoogleService-Info.plist goes; the Xcode GROUP name, not the bundle id. */
+const IOS_DIR = value('ios-dir') ?? 'AIPromptGallery';
 
 const auth = new GoogleAuth({
   credentials: key,
@@ -74,7 +83,7 @@ const run = async () => {
   console.log(`  wrote ${androidPath}`);
 
   const iosCfg = await get(`${API}/${iosApp.name}/config`);
-  const iosPath = `${ROOT}/ios/AIPromptGallery/GoogleService-Info.plist`;
+  const iosPath = `${ROOT}/ios/${IOS_DIR}/GoogleService-Info.plist`;
   writeFileSync(iosPath, Buffer.from(iosCfg.configFileContents, 'base64'));
   console.log(`  wrote ${iosPath}`);
 

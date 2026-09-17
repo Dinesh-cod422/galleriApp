@@ -1,6 +1,7 @@
 import { type PromptDetail, type PromptListItem } from '../entities/Prompt';
 import {
   type GetPromptsParams,
+  type PromptCounter,
   type PromptPage,
   type PromptRepository,
   type SearchPromptsParams,
@@ -9,6 +10,7 @@ import { getFeaturedPrompts } from './getFeaturedPrompts';
 import { getPromptById } from './getPromptById';
 import { getPrompts } from './getPrompts';
 import { getTrendingPrompts } from './getTrendingPrompts';
+import { recordPromptEngagement } from './recordPromptEngagement';
 import { searchPrompts } from './searchPrompts';
 import { promptId } from '@core/types/branded';
 
@@ -23,6 +25,7 @@ class FakePromptRepository implements PromptRepository {
   lastParams: GetPromptsParams | null = null;
   lastSearch: SearchPromptsParams | null = null;
   searchCalls = 0;
+  increments: Array<{ id: string; counter: PromptCounter }> = [];
 
   async getPrompts(params: GetPromptsParams): Promise<PromptPage> {
     this.lastParams = params;
@@ -39,7 +42,27 @@ class FakePromptRepository implements PromptRepository {
     this.lastSearch = params;
     return { ...emptyPage, items: [{ id: promptId('x') } as PromptListItem] };
   }
+  async incrementStat(id: string, counter: PromptCounter): Promise<void> {
+    this.increments.push({ id, counter });
+  }
 }
+
+describe('recordPromptEngagement', () => {
+  it('forwards the prompt and counter to the repository', async () => {
+    const repo = new FakePromptRepository();
+    await recordPromptEngagement(repo)(promptId('pr_1'), 'copiesCount');
+    expect(repo.increments).toEqual([{ id: 'pr_1', counter: 'copiesCount' }]);
+  });
+
+  it('rejects a blank id instead of writing to an empty document path', async () => {
+    const repo = new FakePromptRepository();
+    // AppError is a plain object, not an Error — `toThrow` would not match it.
+    await expect(
+      recordPromptEngagement(repo)(promptId('  '), 'viewsCount'),
+    ).rejects.toMatchObject({ kind: 'validation' });
+    expect(repo.increments).toHaveLength(0);
+  });
+});
 
 describe('getPrompts', () => {
   it('defaults to newest with a page size', async () => {

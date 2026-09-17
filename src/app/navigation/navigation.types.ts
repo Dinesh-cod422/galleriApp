@@ -18,12 +18,25 @@ export type RootStackParamList = {
    * the query cache instead (see `usePromptById`), which needs nothing here.
    */
   PromptDetail: { promptId: string };
-  Category: { categoryId: string; title: string };
+  /**
+   * `title` rides along so the header paints before the query resolves, but it
+   * is OPTIONAL because a deep link cannot supply it — an incoming URL carries
+   * an id and nothing else. The screen falls back to the category's real name
+   * once the list loads.
+   */
+  Category: { categoryId: string; title?: string };
   /**
    * The full list behind a detail-page section. `sort` is the identity; `title`
-   * rides along so the header paints before the query resolves.
+   * is again only a head start, and is derived from `sectionForSort` when a
+   * link arrives without one.
    */
-  PromptSection: { sort: PromptSort; title: string };
+  PromptSection: { sort: PromptSort; title?: string };
+  /**
+   * No params: the query lives in the screen's own state, deliberately. Putting
+   * it in the route would push a new entry per keystroke and make the back
+   * button walk the user backwards through their own typing.
+   */
+  Search: undefined;
 };
 
 declare global {

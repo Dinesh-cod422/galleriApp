@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -7,6 +7,7 @@ import { type CategoryId } from '@core/types/branded';
 import { type RootStackParamList } from '@app/navigation/navigation.types';
 
 import { useRelatedPrompts } from '../hooks/usePrompts';
+import { type SuggestionLedger } from '../hooks/useSuggestionLedger';
 import { toPromptCardVm } from '../mappers/toPromptCardVm';
 import { PromptRail } from './PromptRail';
 
@@ -15,6 +16,9 @@ export type PromptRelatedRailProps = {
   promptId: string;
   categoryId: CategoryId;
   categoryName: string;
+  /** Position among the strips; lower ranks claim contested prompts first. */
+  rank: number;
+  ledger: SuggestionLedger;
 };
 
 /**
@@ -34,11 +38,22 @@ export const PromptRelatedRail = ({
   promptId,
   categoryId,
   categoryName,
+  rank,
+  ledger,
 }: PromptRelatedRailProps): React.JSX.Element | null => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const query = useRelatedPrompts(categoryId, promptId);
+  const excluded = ledger.excludedFor(rank);
+  const query = useRelatedPrompts(categoryId, promptId, excluded);
 
   const items = useMemo(() => query.items.map(item => toPromptCardVm(item)), [query.items]);
+
+  // Ranked first, so this strip gets first claim on anything contested — it is
+  // the only one that depends on WHICH prompt is open, and therefore the only
+  // one whose picks cannot be shown just as well further down.
+  const shownIds = useMemo(() => items.map(item => item.id), [items]);
+  useEffect(() => {
+    ledger.claim(rank, shownIds);
+  }, [ledger, rank, shownIds]);
 
   const onPressPrompt = useStableCallback((id: string) => {
     // push, not navigate: tapping through related prompts should build a back
@@ -59,6 +74,7 @@ export const PromptRelatedRail = ({
   return (
     <PromptRail
       title="Related"
+      icon="grid"
       items={items}
       loading={query.isPending}
       onPressPrompt={onPressPrompt}
