@@ -11,11 +11,11 @@ import { promptId as toPromptId } from '@core/types/branded';
 import { type RootStackParamList } from '@app/navigation/navigation.types';
 import { FavoriteButton } from '@features/favorites/presentation/components/FavoriteButton';
 import {
-  AppImage,
   Avatar,
   Badge,
   Divider,
   ErrorState,
+  ExpandableText,
   Icon,
   Screen,
   Skeleton,
@@ -25,6 +25,7 @@ import {
 } from '@ds';
 
 import { PromptActions } from '../components/PromptActions';
+import { PromptImagePager } from '../components/PromptImagePager';
 import { PromptRelatedRail } from '../components/PromptRelatedRail';
 import { PromptSectionRail } from '../components/PromptSectionRail';
 import { usePromptById } from '../hooks/usePrompts';
@@ -37,6 +38,8 @@ const ACTION_BAR_HEIGHT = 76;
 const styleFactory = (theme: Theme) => ({
   body: { padding: theme.layout.gutter, gap: theme.spacing.base },
   hero: { position: 'relative' as const },
+  /** 4:5 — the most common ratio in the library, so the least jump on average. */
+  heroSkeleton: { aspectRatio: 4 / 5, width: '100%' as const },
   heroBadge: { position: 'absolute' as const, top: theme.spacing.base, left: theme.spacing.base },
   heroFavorite: {
     position: 'absolute' as const,
@@ -142,12 +145,32 @@ export const PromptDetailScreen = (): React.JSX.Element => {
   // placeholder and this branch is skipped entirely.
   if (!prompt) {
     return (
-      <Screen testID="detail-loading">
-        <Skeleton height={260} borderRadius={0} />
+      <Screen edges={[]} testID="detail-loading">
+        {/* Shaped like the real page, not three grey bars: the hero keeps a
+            4:5 box so nothing jumps when the image lands, and each block sits
+            where its content will. */}
+        <View style={styles.heroSkeleton}>
+          <Skeleton height="100%" borderRadius={0} />
+        </View>
         <View style={styles.body}>
-          <Skeleton height={28} width="85%" />
-          <Skeleton height={16} width="45%" />
-          <Skeleton height={120} />
+          <View style={styles.titleBlock}>
+            <Skeleton height={26} width="80%" />
+            <View style={styles.authorRow}>
+              <Skeleton height={32} width={32} borderRadius={16} />
+              <Skeleton height={14} width={120} />
+            </View>
+          </View>
+          <View style={styles.statRow}>
+            <Skeleton height={28} width={96} borderRadius={999} />
+            <Skeleton height={28} width={96} borderRadius={999} />
+            <Skeleton height={28} width={80} borderRadius={999} />
+          </View>
+          <View style={styles.promptBox}>
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} width="55%" />
+          </View>
         </View>
       </Screen>
     );
@@ -162,15 +185,9 @@ export const PromptDetailScreen = (): React.JSX.Element => {
       <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {/* Full resolution here — and only here. It crossfades in over the
-              cached thumbnail the placeholder painted on the first frame. */}
-          <AppImage
-            uri={prompt.imageUrl}
-            aspectRatio={prompt.aspectRatio}
-            priority="high"
-            borderRadius={0}
-            transition="fade"
-            accessibilityLabel={prompt.title}
-          />
+              cached thumbnail the placeholder painted on the first frame.
+              Swipeable when the prompt carries more than one image. */}
+          <PromptImagePager images={prompt.images} title={prompt.title} />
           {badge !== null && (
             <View style={styles.heroBadge}>
               <Badge label={badge.label} tone={badge.tone} />
@@ -239,9 +256,11 @@ export const PromptDetailScreen = (): React.JSX.Element => {
                   <Skeleton height={14} width="60%" />
                 </>
               ) : (
-                <Text variant="mono" selectable>
+                // Prompts run to several thousand characters. Seven lines is
+                // enough to judge one; the rest is a tap away.
+                <ExpandableText variant="mono" selectable numberOfLines={7} testID="detail-prompt">
                   {prompt.prompt}
-                </Text>
+                </ExpandableText>
               )}
             </View>
 

@@ -3,6 +3,7 @@ import { authorId, categoryId, promptId } from '@core/types/branded';
 
 import {
   type PromptDetail,
+  type PromptImage,
   type PromptListItem,
   type PromptMetadata,
   type PromptStats,
@@ -41,12 +42,26 @@ const toMetadata = (dto: PromptDto): PromptMetadata => ({
   generationParameters: dto.metadata?.generationParameters ?? {},
 });
 
+/**
+ * The image's own pixels beat the '4:5' label, which is only ever the NEAREST
+ * standard ratio. A 1103x1426 file is 0.774, not 0.8 — small, but it is the
+ * difference between the detail hero keeping the height the grid reserved for
+ * it and visibly resizing the moment the real document lands.
+ */
+const layoutAspectRatio = (dto: PromptDto): number => {
+  const { width = 0, height = 0 } = dto.metadata?.resolution ?? {};
+  if (width > 0 && height > 0) {
+    return width / height;
+  }
+  return parseAspectRatio(dto.metadata?.aspectRatio ?? '1:1');
+};
+
 export const toPromptListItem = (id: string, dto: PromptDto): PromptListItem => ({
   id: promptId(id),
   title: dto.title,
   thumbnailUrl: dto.thumbnailUrl,
   blurHash: dto.blurHash ?? null,
-  aspectRatio: parseAspectRatio(dto.metadata?.aspectRatio ?? '1:1'),
+  aspectRatio: layoutAspectRatio(dto),
   categoryId: categoryId(dto.categoryId),
   categoryName: dto.categoryName,
   author: {
@@ -61,10 +76,44 @@ export const toPromptListItem = (id: string, dto: PromptDto): PromptListItem => 
   createdAt: toIso(dto.publishedAt ?? dto.createdAt),
 });
 
+/**
+ * Primary first, and never empty.
+ *
+ * A document from before multi-image support has no `images`, so one is
+ * synthesised from the scalar fields — which keeps every consumer on a single
+ * code path instead of testing for the field's existence.
+ */
+const toImages = (dto: PromptDto): PromptImage[] => {
+  // The SAME number the list item lays out with, or the hero resizes when the
+  // real document replaces the cached placeholder.
+  const fallbackAspect = layoutAspectRatio(dto);
+  const declared = dto.images ?? [];
+  if (declared.length === 0) {
+    return [
+      {
+        url: dto.imageUrl,
+        thumbnailUrl: dto.thumbnailUrl,
+        width: dto.metadata?.resolution?.width ?? 0,
+        height: dto.metadata?.resolution?.height ?? 0,
+        aspectRatio: fallbackAspect,
+      },
+    ];
+  }
+  return declared.map(image => ({
+    url: image.url,
+    thumbnailUrl: image.thumbnailUrl,
+    width: image.width,
+    height: image.height,
+    aspectRatio:
+      image.width > 0 && image.height > 0 ? image.width / image.height : fallbackAspect,
+  }));
+};
+
 export const toPromptDetail = (id: string, dto: PromptDto): PromptDetail => ({
   ...toPromptListItem(id, dto),
   prompt: dto.prompt,
   imageUrl: dto.imageUrl,
+  images: toImages(dto),
   sourceUrl: dto.sourceUrl ?? null,
   tags: dto.tags ?? [],
   metadata: toMetadata(dto),

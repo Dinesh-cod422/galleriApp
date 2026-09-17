@@ -19,6 +19,7 @@ export type SkeletonProps = {
   height?: DimensionValue;
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 /**
@@ -35,6 +36,7 @@ const SkeletonComponent = ({
   height = 16,
   borderRadius,
   style,
+  testID,
 }: SkeletonProps): React.JSX.Element => {
   const styles = useThemedStyles(styleFactory);
   const theme = useTheme();
@@ -46,6 +48,7 @@ const SkeletonComponent = ({
 
   return (
     <Animated.View
+      testID={testID}
       accessibilityRole="progressbar"
       accessibilityLabel="Loading"
       style={[

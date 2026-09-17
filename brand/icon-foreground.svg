@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <mask id="counter">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <path d="M 552 296 C 552 374.4, 585.6 408, 664 408 C 585.6 408, 552 441.6, 552 520 C 552 441.6, 518.4 408, 440 408 C 518.4 408, 552 374.4, 552 296 Z" fill="#000"/>
+    </mask>
+  </defs>
+  <g transform="translate(112.63999999999999 112.63999999999999) scale(0.78)">
+  <g mask="url(#counter)">
+    <rect x="302" y="218" width="104" height="586" rx="52" fill="#FFFFFF"/>
+    <circle cx="532" cy="408" r="190" fill="#FFFFFF"/>
+  </g>
+  </g>
+</svg>

@@ -8,7 +8,7 @@
  * Idempotent: every document has a deterministic id and is written with
  * set() (full overwrite), so re-running converges rather than duplicating.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { argv, env, exit } from 'node:process';
 
@@ -28,11 +28,14 @@ const value = (name) => {
 const DRY_RUN = flag('dry-run');
 const CONFIRMED = flag('yes');
 const WITH_ENGAGEMENT = flag('with-engagement');
+/** Remove documents this dataset no longer contains — e.g. superseded demo data. */
+const PRUNE = flag('prune');
 const KEY_PATH = value('key') ?? env.GOOGLE_APPLICATION_CREDENTIALS;
 const PROJECT_ID = value('project');
 const IMAGE_BASE = value('image-base') ?? 'picsum';
 /** Named Firestore database, to keep seed data out of an existing default DB. */
 const DATABASE_ID = value('database');
+const BACKUP_PATH = value('backup');
 
 const MS_PER_DAY = 86_400_000;
 const NOW = Date.now();
@@ -40,11 +43,35 @@ const NOW = Date.now();
 // ─── Derivations: see promptDoc.mjs (shared with upload-images.mjs) ────────
 
 /**
+ * Real images, when build-hosting-images.mjs has published any. The manifest
+ * is the record of what is actually deployed, so a prompt listed here gets its
+ * true URLs and its TRUE PIXEL DIMENSIONS — which is what makes the masonry
+ * grid stagger, since the export's own aspect ratios are mostly guesses.
+ */
+const MANIFEST_PATH = resolve(import.meta.dirname, '../../hosting/manifest.json');
+const MANIFEST = existsSync(MANIFEST_PATH)
+  ? JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'))
+  : {};
+
+/** Common ratios only: metadata.aspectRatio is shown to users as a label. */
+const STANDARD_RATIOS = ['1:1', '4:5', '2:3', '3:4', '9:16', '3:2', '4:3', '16:9'];
+const nearestRatioLabel = (width, height) => {
+  const actual = width / height;
+  return STANDARD_RATIOS.reduce((best, label) =>
+    Math.abs(aspectToNumber(label) - actual) < Math.abs(aspectToNumber(best) - actual) ? label : best,
+  );
+};
+
+/**
  * Placeholder imagery. Real images arrive via the Storage upload pipeline;
  * until then picsum gives deterministic, genuinely different resolutions so
  * the thumbnail/full-res split is exercised rather than faked.
  */
 const buildImageUrls = (promptDoc) => {
+  const hosted = MANIFEST[promptDoc.id];
+  if (hosted) return { imageUrl: hosted.original, thumbnailUrl: hosted.thumb };
+
+
   const { width, height } = promptDoc.metadata.resolution;
   if (IMAGE_BASE === 'picsum') {
     const thumbW = 400;
@@ -58,6 +85,36 @@ const buildImageUrls = (promptDoc) => {
   return {
     imageUrl: `${IMAGE_BASE}/o/${enc(`prompts/original/${promptDoc.id}.webp`)}?alt=media`,
     thumbnailUrl: `${IMAGE_BASE}/o/${enc(`prompts/thumbnails/${promptDoc.id}.webp`)}?alt=media`,
+  };
+};
+
+/**
+ * Every picture for this prompt, primary first — a before/after pair, or two
+ * poses of one "unisex" prompt. Always written, even for a single image, so
+ * readers never have to handle both a scalar and an array shape.
+ */
+const buildImages = (promptDoc) => {
+  const hosted = MANIFEST[promptDoc.id];
+  if (!hosted) {
+    const { imageUrl, thumbnailUrl } = buildImageUrls(promptDoc);
+    const { width, height } = promptDoc.metadata.resolution;
+    return [{ url: imageUrl, thumbnailUrl, width, height }];
+  }
+  return hosted.images.map((image) => ({
+    url: image.original,
+    thumbnailUrl: image.thumb,
+    width: image.width,
+    height: image.height,
+  }));
+};
+
+const buildMetadata = (promptDoc) => {
+  const hosted = MANIFEST[promptDoc.id];
+  if (!hosted?.width || !hosted?.height) return promptDoc.metadata;
+  return {
+    ...promptDoc.metadata,
+    aspectRatio: nearestRatioLabel(hosted.width, hosted.height),
+    resolution: { width: hosted.width, height: hosted.height },
   };
 };
 
@@ -90,6 +147,7 @@ const buildPromptDoc = (p) => {
 
     imageUrl,
     thumbnailUrl,
+    images: buildImages(p),
     blurHash: null,
 
     categoryId: category.id,
@@ -105,7 +163,9 @@ const buildPromptDoc = (p) => {
     trendingScore: trendingScore(p.stats, ageHours),
     status: 'published',
 
-    metadata: p.metadata,
+    // A published image's own pixels beat the ratio parsed out of the prompt
+    // text, so metadata follows the file whenever one exists.
+    metadata: buildMetadata(p),
 
     // Seed data backdates deliberately: serverTimestamp() would collapse all
     // 32 documents onto the same instant and make pagination untestable.
@@ -205,6 +265,7 @@ if (!usingEmulator && !CONFIRMED) {
       `${AUTHORS.length} users to LIVE project "${projectId}"` +
       `${DATABASE_ID ? ` database "${DATABASE_ID}"` : ' (default database)'}.\n` +
       'Existing documents with the same ids will be OVERWRITTEN.\n' +
+      `${PRUNE ? 'Documents NOT in this dataset will be DELETED (backed up to JSON first).\n' : ''}` +
       'Re-run with --yes to confirm.',
   );
   exit(1);
@@ -277,7 +338,53 @@ const run = async () => {
     await commitInBatches(ops, 'engagement');
   }
 
+  if (PRUNE) await prune();
+
   console.log(`\nDone. Verify: https://console.firebase.google.com/project/${projectId}/firestore\n`);
+};
+
+/**
+ * Deletes documents the current dataset does not define, so replacing a data
+ * set leaves nothing of the old one behind. set() alone cannot do this: it
+ * overwrites matching ids and silently leaves every other document in place.
+ *
+ * Everything removed is written to a JSON file FIRST. A delete here is
+ * unrecoverable, and "the seed script quietly ate my data" must not be a thing
+ * that can happen.
+ */
+const prune = async () => {
+  const keep = {
+    categories: new Set(CATEGORIES.map((c) => c.id)),
+    users: new Set(AUTHORS.map((a) => a.id)),
+    prompts: new Set(PROMPTS.map((p) => p.id)),
+  };
+
+  const stale = [];
+  for (const [collection, ids] of Object.entries(keep)) {
+    const snap = await db.collection(collection).get();
+    for (const doc of snap.docs) {
+      if (!ids.has(doc.id)) stale.push({ collection, id: doc.id, ref: doc.ref, data: doc.data() });
+    }
+  }
+
+  if (stale.length === 0) {
+    console.log('\nprune: nothing stale.');
+    return;
+  }
+
+  const backupPath = resolve(BACKUP_PATH ?? `./pruned-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+  writeFileSync(
+    backupPath,
+    `${JSON.stringify(stale.map(({ collection, id, data }) => ({ collection, id, data })), null, 2)}\n`,
+  );
+  console.log(`\nprune: ${stale.length} stale document(s) backed up to ${backupPath}`);
+
+  for (let i = 0; i < stale.length; i += 450) {
+    const batch = db.batch();
+    for (const s of stale.slice(i, i + 450)) batch.delete(s.ref);
+    await batch.commit();
+  }
+  for (const s of stale) console.log(`  deleted ${s.collection}/${s.id}`);
 };
 
 run().catch((error) => {

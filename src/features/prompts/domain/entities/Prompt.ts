@@ -27,6 +27,22 @@ export type PromptMetadata = {
 };
 
 /**
+ * One picture belonging to a prompt.
+ *
+ * A prompt can have more than one — a before/after pair for an enhancement
+ * prompt, or the male and female takes on a "unisex" pose — and the array is
+ * what keeps them together instead of forcing a second, fake prompt per image.
+ */
+export type PromptImage = {
+  readonly url: string;
+  readonly thumbnailUrl: string;
+  readonly width: number;
+  readonly height: number;
+  /** Width / height, already divided, for the same reason as below. */
+  readonly aspectRatio: number;
+};
+
+/**
  * Everything a gallery card renders — and nothing more.
  *
  * `imageUrl` is deliberately absent: a card physically cannot pull a 2048px
@@ -55,7 +71,14 @@ export type PromptListItem = {
  */
 export type PromptDetail = PromptListItem & {
   readonly prompt: string;
+  /** The primary image. Always equal to `images[0].url`. */
   readonly imageUrl: string;
+  /**
+   * Every picture for this prompt, primary first. NEVER empty: a prompt with a
+   * single image still has a one-element array, so callers never branch on
+   * "array or scalar" — only on `length > 1` when they want a gallery.
+   */
+  readonly images: readonly PromptImage[];
   /**
    * Permalink to the post this prompt was published from, or null.
    * Attribution only — it is a web page, never an image source.

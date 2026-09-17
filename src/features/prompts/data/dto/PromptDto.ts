@@ -9,6 +9,16 @@ export type PromptDto = {
   sourceUrl?: string | null;
   imageUrl: string;
   thumbnailUrl: string;
+  /**
+   * OPTIONAL: documents written before multi-image support have no field here,
+   * and the mapper synthesises a one-element array from imageUrl for them.
+   */
+  images?: {
+    url: string;
+    thumbnailUrl: string;
+    width: number;
+    height: number;
+  }[];
   blurHash: string | null;
   categoryId: string;
   categoryName: string;

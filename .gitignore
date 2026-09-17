@@ -86,3 +86,9 @@ ui-debug.log
 .env
 .env.*
 !.env.example
+
+# Built image renditions — cloud-only, archived at ~/Desktop/prompt-images/
+# Never commit these: 64MB of binaries whose home is the CDN, not the repo.
+# hosting/manifest.json IS tracked — it is the record of what is live, and the
+# predeploy guard reads it to refuse a deploy that would empty the site.
+hosting/prompts/

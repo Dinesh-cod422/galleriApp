@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "test:coverage": "jest --coverage",
     "circular": "npx --yes madge@8 --circular --extensions ts,tsx src",
-    "verify": "npm run typecheck && npm run lint && npm run circular && npm test"
+    "verify": "npm run typecheck && npm run lint && npm run circular && npm test",
+    "hosting:restore": "cp -R ~/Desktop/prompt-images/hosting-build/prompts hosting/prompts",
+    "hosting:check": "node tools/seed/assert-hosting-ready.mjs",
+    "hosting:deploy": "npx firebase-tools@14 deploy --only hosting --project notesapp-ed63a"
   },
   "dependencies": {
     "@d11/react-native-fast-image": "^8.13.0",

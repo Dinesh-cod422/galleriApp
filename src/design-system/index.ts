@@ -38,6 +38,10 @@ export { EmptyState, type EmptyStateProps } from './components/EmptyState/EmptyS
 export { ErrorState, type ErrorStateProps } from './components/ErrorState/ErrorState';
 export { BottomSheet, type BottomSheetRef } from './components/BottomSheet/BottomSheet';
 export { Divider } from './components/Divider/Divider';
+export {
+  ExpandableText,
+  type ExpandableTextProps,
+} from './components/ExpandableText/ExpandableText';
 export { Screen, type ScreenProps } from './components/Screen/Screen';
 export { AppImage, type AppImageProps, type ImagePriority } from './components/AppImage/AppImage';
 

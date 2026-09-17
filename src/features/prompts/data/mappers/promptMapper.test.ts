@@ -97,3 +97,87 @@ describe('toPromptDetail', () => {
     expect(detail.prompt).toBe('A cinematic portrait…');
   });
 });
+
+describe('toPromptDetail images', () => {
+  it('synthesises a one-element array for a document written before multi-image support', () => {
+    const detail = toPromptDetail('pr_1', dto());
+
+    expect(detail.images).toEqual([
+      {
+        url: 'https://cdn/full.webp',
+        thumbnailUrl: 'https://cdn/thumb.webp',
+        width: 2048,
+        height: 1365,
+        aspectRatio: expect.closeTo(1.5, 3) as unknown as number,
+      },
+    ]);
+  });
+
+  it('keeps every image, primary first, with its OWN aspect ratio', () => {
+    const detail = toPromptDetail(
+      'pr_172',
+      dto({
+        images: [
+          { url: 'https://cdn/after.webp', thumbnailUrl: 'https://cdn/after-t.webp', width: 1000, height: 1250 },
+          { url: 'https://cdn/before.webp', thumbnailUrl: 'https://cdn/before-t.webp', width: 988, height: 1285 },
+        ],
+      }),
+    );
+
+    expect(detail.images).toHaveLength(2);
+    expect(detail.images[0]?.url).toBe('https://cdn/after.webp');
+    // Not the document's 3:2 metadata — each image reports its own pixels.
+    expect(detail.images[0]?.aspectRatio).toBeCloseTo(0.8);
+    expect(detail.images[1]?.aspectRatio).toBeCloseTo(0.7689, 3);
+  });
+
+  it('falls back to the metadata ratio when an image reports no dimensions', () => {
+    const detail = toPromptDetail(
+      'pr_2',
+      dto({ images: [{ url: 'https://cdn/x.webp', thumbnailUrl: 'https://cdn/x-t.webp', width: 0, height: 0 }] }),
+    );
+
+    expect(detail.images[0]?.aspectRatio).toBeCloseTo(1.5);
+  });
+
+  it('always leads with the same url as imageUrl', () => {
+    const detail = toPromptDetail('pr_3', dto());
+    expect(detail.images[0]?.url).toBe(detail.imageUrl);
+  });
+});
+
+describe('layout aspect ratio', () => {
+  it('uses the image dimensions rather than the nearest-standard label', () => {
+    // 1103x1426 is 0.7735. The label rounds it to 4:5 (0.8) for display, but
+    // laying out with 0.8 makes the detail hero resize when it loads.
+    const item = toPromptListItem(
+      'pr_197',
+      dto({ metadata: { ...dto().metadata, aspectRatio: '4:5', resolution: { width: 1103, height: 1426 } } }),
+    );
+
+    expect(item.aspectRatio).toBeCloseTo(0.7735, 4);
+  });
+
+  it('falls back to the label when a document carries no dimensions', () => {
+    const item = toPromptListItem(
+      'pr_x',
+      dto({ metadata: { ...dto().metadata, aspectRatio: '16:9', resolution: { width: 0, height: 0 } } }),
+    );
+
+    expect(item.aspectRatio).toBeCloseTo(16 / 9);
+  });
+
+  it('gives the list item and the detail the SAME ratio', () => {
+    // They disagreeing is what makes the hero jump between the grid tap and
+    // the document arriving.
+    const source = dto({
+      metadata: { ...dto().metadata, aspectRatio: '4:5', resolution: { width: 1103, height: 1426 } },
+    });
+
+    const item = toPromptListItem('pr_197', source);
+    const detail = toPromptDetail('pr_197', source);
+
+    expect(detail.aspectRatio).toBe(item.aspectRatio);
+    expect(detail.images[0]?.aspectRatio).toBeCloseTo(item.aspectRatio, 5);
+  });
+});

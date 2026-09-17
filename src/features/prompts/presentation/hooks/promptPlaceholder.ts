@@ -46,6 +46,17 @@ export const toDetailPlaceholder = (item: PromptListItem): PromptDetail => ({
   prompt: '',
   // The thumbnail, upscaled, until the full-resolution file crossfades over it.
   imageUrl: item.thumbnailUrl,
+  // One entry, because a list item cannot know about a prompt's other images.
+  // The real document replaces this the moment the fetch lands.
+  images: [
+    {
+      url: item.thumbnailUrl,
+      thumbnailUrl: item.thumbnailUrl,
+      width: 0,
+      height: 0,
+      aspectRatio: item.aspectRatio,
+    },
+  ],
   sourceUrl: null,
   tags: [],
   metadata: {

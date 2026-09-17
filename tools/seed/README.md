@@ -56,12 +56,73 @@ decisions that turn it into this project's schema:
 ## Images
 
 Images do NOT go in Firestore — a document is capped at 1 MiB, and inlining
-image bytes means re-downloading every picture on every list query. They go in
-Cloud Storage; Firestore holds only the URLs.
+image bytes means re-downloading every picture on every list query. Firestore
+holds only the URLs.
+
+There are two routes to those URLs. They publish the **same three renditions at
+the same paths**, so moving between them changes a URL prefix and nothing else.
+
+### Route A — Firebase Hosting (in use)
+
+Cloud Storage cannot create a bucket without a billing account on the project,
+and `notesapp-ed63a` has none:
+
+```
+POST storage/v1/b?project=notesapp-ed63a
+403  "The billing account for the owning project is disabled in state absent"
+```
+
+Hosting is on the free plan, serves from the same CDN, and gives permanent
+public URLs, so it carries the images today.
+
+```bash
+# 1. Transcode into hosting/ (writes nothing remote)
+#    --rename maps a filename to its prompt id: image_188.png -> pr_188
+node build-hosting-images.mjs --dir ~/Desktop/prompt-images/source-png \
+     --rename 'image_(\d+)' --to 'pr_$1'
+
+# 2. Publish — only touches Hosting
+npm run hosting:deploy
+```
+
+### The renditions are NOT in the repo
+
+`hosting/prompts/` is gitignored and kept out of the working tree: 64 MB of
+binaries whose home is the CDN. The originals and the built renditions are
+archived on the Desktop:
+
+```
+~/Desktop/prompt-images/source-png/            # 474 MB of source PNGs
+~/Desktop/prompt-images/hosting-build/prompts/ #  64 MB of built .webp
+```
+
+What stays in the repo is `hosting/manifest.json` — text, and the *record* of
+what is live. `seed.mjs` reads it, and so does the deploy guard.
+
+**Hosting deploys replace the entire site.** With `hosting/prompts/` absent,
+a deploy would take all 609 files off the CDN and break every image in the app.
+`assert-hosting-ready.mjs` runs as the `predeploy` hook in `firebase.json` and
+refuses that deploy, so the mistake is not reachable by typing the command from
+memory. To deploy for real, put the files back first:
+
+```bash
+npm run hosting:restore   # copy the archive back into hosting/prompts
+npm run hosting:check     # optional — the predeploy hook runs it anyway
+npm run hosting:deploy
+```
+
+`hosting/manifest.json` records what is deployed. `seed.mjs` reads it, so a
+prompt with a published image gets real URLs **and its real pixel dimensions**;
+everything else keeps its placeholder. That dimension override matters: the
+export's aspect ratios are parsed out of prompt text and mostly default to 4:5,
+so the masonry grid only staggers once real files supply true proportions.
+
+### Route B — Cloud Storage (needs billing)
 
 ```bash
 # 0. Enable Storage once: Firebase console -> Build -> Storage -> Get started.
-#    Then deploy storage.rules, or prompts/** stays unreadable.
+#    Requires the Blaze plan. Then deploy storage.rules, or prompts/** stays
+#    unreadable.
 
 # 1. Preview the mapping — no credentials, writes nothing
 node upload-images.mjs --dir ./my-images --dry-run
@@ -81,6 +142,9 @@ Per image it writes three renditions and then the document:
 | `prompts/original/{id}.webp` | long edge ≤ 2048 | detail screen |
 | `prompts/thumbnails/{id}.webp` | 400px wide | every grid + rail tile |
 | `prompts/thumbnails@2x/{id}.webp` | 800px wide | tablets |
+
+Hosting serves those paths at `https://notesapp-ed63a.web.app/<path>`; Storage
+at `…/o/{encodedPath}?alt=media`.
 
 - **EXIF is stripped** after `rotate()` applies the orientation. That order
   matters: dropping metadata first bakes in a sideways image. It also removes
@@ -129,6 +193,8 @@ shapes and reports the URL from each `FAILED_PRECONDITION`, so it doubles as a
 | `--yes` | Required to write to a live (non-emulator) project |
 | `--with-engagement` | Also seed `likes/` and `favorites/` subcollections |
 | `--image-base <url>` | Swap picsum placeholders for real Storage URLs |
+| `--prune` | Delete documents this dataset no longer defines — backed up to JSON first |
+| `--backup <path>` | Where `--prune` writes that backup (default `./pruned-<timestamp>.json`) |
 
 ## Notes
 
