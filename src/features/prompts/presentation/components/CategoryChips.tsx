@@ -41,7 +41,7 @@ const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
         alignItems: 'center' as const,
         gap: HScale.Width_9,
         paddingHorizontal: HScale.Width_18,
-        height: HScale.Width_55,
+        height: HScale.Width_46,
         borderRadius: 999,
         backgroundColor: p.bg.surface,
         borderWidth: 1,
@@ -55,7 +55,7 @@ const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
     }),
     palette: p,
     iconSizes: { sm: IconSize.iconSize_18 },
-    metrics: { control: VScale.Height_55, w110: HScale.Width_127, w72: HScale.Width_83, w90: HScale.Width_104 },
+    metrics: { control: HScale.Width_46, w110: HScale.Width_127, w72: HScale.Width_83, w90: HScale.Width_104 },
     radii: { pill: 999 },
   };
 };
