@@ -16,22 +16,28 @@ const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
 
   return {
     ...StyleSheet.create({
-    content: {
-      // What is left over after the cells' own half-gaps, so the outermost
-      // cell edges land exactly on the screen gutter.
-      paddingHorizontal: layout.gutter - inset,
-      paddingTop: layout.gridGap,
-      // Clears the floating tab bar, which the grid scrolls UNDERNEATH rather
-      // than stopping above — without this the last row sits behind it and
-      // cannot be scrolled into view. From the theme, because the bar's size is
-      // defined there: this was `huge + xxl` here and a literal 120 on two
-      // other screens, three guesses at one number.
-      paddingBottom: layout.tabBarClearance,
-    },
-    cell: {
-      paddingHorizontal: inset,
-      paddingBottom: layout.gridGap,
-    },
+      content: {
+        // What is left over after the cells' own half-gaps, so the outermost
+        // cell edges land exactly on the screen gutter.
+        paddingHorizontal: layout.gutter - inset,
+        paddingTop: layout.gridGap,
+        // Clears the floating tab bar, which the grid scrolls UNDERNEATH rather
+        // than stopping above — without this the last row sits behind it and
+        // cannot be scrolled into view. From the theme, because the bar's size is
+        // defined there: this was `huge + xxl` here and a literal 120 on two
+        // other screens, three guesses at one number.
+        paddingBottom: layout.tabBarClearance,
+      },
+      cell: {
+        // A definite width, not an inherited one. FlashList's masonry cells do
+        // not impose a width on their child, so a tile whose only sizing rule is
+        // an aspectRatio resolves to 0x0 — and a list of zero-height cells never
+        // fills the viewport, so FlashList re-renders until it gives up with
+        // "Exceeded max renders without commit" and paints nothing at all.
+        width: '100%',
+        paddingHorizontal: inset,
+        paddingBottom: layout.gridGap,
+      },
     }),
     layout,
   };
@@ -87,7 +93,6 @@ export const PromptMasonryGrid = ({
   );
 
   const keyExtractor = useCallback((item: PromptCardVm) => item.id, []);
-
   return (
     <FlashList
       masonry
@@ -105,3 +110,4 @@ export const PromptMasonryGrid = ({
     />
   );
 };
+

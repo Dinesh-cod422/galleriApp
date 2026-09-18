@@ -92,3 +92,7 @@ ui-debug.log
 # hosting/manifest.json IS tracked — it is the record of what is live, and the
 # predeploy guard reads it to refuse a deploy that would empty the site.
 hosting/prompts/
+
+# Release signing — the upload key and its password must never be committed.
+*.jks
+android/keystore.properties

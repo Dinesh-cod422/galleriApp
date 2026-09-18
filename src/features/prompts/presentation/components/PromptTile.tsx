@@ -44,6 +44,13 @@ const getStyles = (_appTheme: AppTheme, responsive: Responsive) => {
 
   return {
     ...StyleSheet.create({
+      // The masonry grid passes no `width` — the tile is expected to fill the
+      // column. Without this it has no width rule at all, and the image below
+      // it sizes purely from `aspectRatio`, which needs a width to mean
+      // anything.
+      fillWidth: {
+        width: '100%' as const,
+      },
       badge: {
         position: 'absolute' as const,
         top: HScale.Width_14,
@@ -116,7 +123,7 @@ const PromptTileComponent = ({
       onPress={() => onPress(vm.id)}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      style={[width !== undefined && { width }, animatedStyle, style]}>
+      style={[width !== undefined ? { width } : styles.fillWidth, animatedStyle, style]}>
       {/* Thumbnail, never the full-resolution image — enforced by the type:
           PromptListItem has no imageUrl at all. */}
       <AppImage

@@ -67,6 +67,7 @@ const getStyles = (appTheme: AppTheme, responsive: Responsive) => {
   return {
     ...StyleSheet.create({
       container: {
+        width: '100%' as const,
         overflow: 'hidden' as const,
         backgroundColor: p.bg.imagePlaceholder,
       },
